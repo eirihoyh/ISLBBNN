@@ -5,20 +5,20 @@ import copy
 import torch
 from torchmetrics import R2Score, MeanSquaredError
 
-import os
-import sys
-current_dir = os.getcwd()
-sys.path.append('layers')
+# import os
+# import sys
+# current_dir = os.getcwd()
+# sys.path.append('layers')
 # sys.path.append('experiments_linear_functions/layers')
-from config import config
-dim = config['hidden_dim']
-n_layers = config['n_layers'] 
-n_hidden_layers = n_layers - 2
-n_samples = config['n_samples']
+# from config import config
+# dim = config['hidden_dim']
+# n_layers = config['n_layers'] 
+# n_hidden_layers = n_layers - 2
+# n_samples = config['n_samples']
 
 
 
-def create_data_unif(n=n_samples,beta=[100,1,1,1,1], dep_level=0.5,classification=False, non_lin=False):
+def create_data_unif(n,beta=[100,1,1,1,1], dep_level=0.5,classification=False, non_lin=False):
     """
     Create simple dataset with four independent variables (drawn uniformly from -10 to 10). 
     Can make x3 dependent on x1 by using the following function
@@ -45,7 +45,8 @@ def create_data_unif(n=n_samples,beta=[100,1,1,1,1], dep_level=0.5,classificatio
         y = beta[0] + beta[1]*x1 + beta[2]*x2 + beta[3]*x1**2 + beta[4]*x2**2 + x1*x2 # non-linear model
     else:
         y = beta[0] + beta[1]*x1 + beta[2]*x2
-    rand0 = stats.norm.rvs(scale=0.01, size=n)
+    # rand0 = stats.norm.rvs(scale=0.01, size=n)
+    rand0 = stats.norm.rvs(scale=0.5, size=n)
     y += rand0
     if classification:
         y -= y.min()
@@ -322,7 +323,7 @@ def network_density_reduction(clean_alpha_list):
 
     return used_weights/tot_weights, used_weights, tot_weights
 
-def create_layer_name_list(n_layers=n_layers, net=None):
+def create_layer_name_list(n_layers=None, net=None):
     """
     Get names for all layers based on the total amount of layers.
 
@@ -769,7 +770,7 @@ def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weig
         # print(target)
                 
         net.zero_grad()
-        if flows:
+        if flows:  # TODO: Change name, this is for both flow and lrt, not used Aliaksandrs approach
             outputs = net(data, sample=True, post_train=post_train)
             # print(outputs)
             negative_log_likelihood = net.loss(outputs, target)

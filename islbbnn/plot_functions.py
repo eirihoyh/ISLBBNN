@@ -44,12 +44,55 @@ def plot_whole_path_graph(alpha_list, all_connections, save_path, show=True):
     dot.render(save_path, view=show)
 
 
+def plot_whole_path_graph_weight(weight_list, all_connections, save_path, show=True):
+    dot = Digraph(f"All paths!")
+    n_layers = len(weight_list) + 1
+    dim = weight_list[0].shape[0]
+    layer_list = pip_func.create_layer_name_list(n_layers)
+    all_names = []
+    for layer_ind, connection in enumerate(all_connections):
+        for t, f in connection:
+            if f >= dim:
+                from_node = f"I_{f-dim}"
+            else:
+                from_node = f"{layer_list[layer_ind]}_{f}"
+                
+            if from_node not in all_names:
+                dot.node(from_node)
+                all_names.append(from_node)
+
+            if t >= dim and layer_ind+1 < n_layers:
+                to_node = f"I_{t-dim}"
+            else:    
+                to_node = f"{layer_list[layer_ind+1]}_{t}"
+
+            if to_node not in all_names:
+                dot.node(to_node)
+                all_names.append(to_node)
+
+            dot.edge(from_node, to_node, label=f"w={weight_list[layer_ind][t][f]:.2f}")
+        
+    dot.node(f"All paths", shape="Msquare")
+    # dot.edges(edges)
+    dot.format = 'png' # save as PNG file
+    dot.strict = True
+    # print(dot.source)
+    dot.render(save_path, view=show)
+
+
 def run_path_graph(net, threshold=0.5, save_path="path_graphs/all_paths_input_skip", show=True):
     # net = copy.deepcopy(net)
     alpha_list = pip_func.get_alphas(net)
     clean_alpha_list = pip_func.clean_alpha(net, threshold)
     all_connections = pip_func.get_active_weights(clean_alpha_list)
     plot_whole_path_graph(alpha_list, all_connections, save_path=save_path, show=show)
+
+def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_input_skip", show=True):
+    # net = copy.deepcopy(net)
+    weight_list = pip_func.weight_matrices_numpy(net)
+    clean_alpha_list = pip_func.clean_alpha(net, threshold)
+    all_connections = pip_func.get_active_weights(clean_alpha_list)
+    plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
 
 
 def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, threshold=0.5, thresh_w=0.0, save_path=None):
