@@ -31,7 +31,7 @@ class BayesianLinear(nn.Module):
 
         # prior distribution on all weights is N(0,1)
         self.mu_prior = torch.zeros(out_features, in_features, device=DEVICE)
-        self.sigma_prior = (self.mu_prior + 2.).to(DEVICE)
+        self.sigma_prior = (self.mu_prior + 20.).to(DEVICE)
 
         # initialize the posterior inclusion probability. Here we must have alpha in (0,1)
         self.lambdal = nn.Parameter(torch.Tensor(out_features, in_features).uniform_(lower_init_lambda, upper_init_lambda))
@@ -47,7 +47,7 @@ class BayesianLinear(nn.Module):
 
         # bias priors = N(0,1)
         self.bias_mu_prior = torch.zeros(out_features, device=DEVICE)
-        self.bias_sigma_prior = (self.bias_mu_prior + 1.).to(DEVICE)
+        self.bias_sigma_prior = (self.bias_mu_prior + 10.).to(DEVICE)
 
         # # initialize the posterior inclusion probability for bias. Here we must have alpha in (0,1)
         # self.bias_lambdal = nn.Parameter(torch.Tensor(out_features).uniform_(lower_init_lambda, upper_init_lambda))
