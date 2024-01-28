@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import math
-from flows import PropagateFlow
+# from flows import PropagateFlow
+from layers.flows import PropagateFlow
 # DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "mps")
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 LOADER_KWARGS = {'num_workers': 1, 'pin_memory': True} if torch.cuda.is_available() else {}
@@ -30,7 +31,7 @@ class BayesianLinear(nn.Module):
 
         # prior distribution on all weights is N(0,1)
         self.mu_prior = torch.zeros(out_features, in_features, device=DEVICE)
-        self.sigma_prior = (self.mu_prior + 15.).to(DEVICE)
+        self.sigma_prior = (self.mu_prior + 2.).to(DEVICE)
 
         # initialize the posterior inclusion probability. Here we must have alpha in (0,1)
         self.lambdal = nn.Parameter(torch.Tensor(out_features, in_features).uniform_(lower_init_lambda, upper_init_lambda))

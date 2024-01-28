@@ -17,7 +17,7 @@ class BayesianLinear(nn.Module):
 
         # weight priors = N(0,1)
         self.mu_prior = torch.zeros(out_features, in_features, device=DEVICE) 
-        self.sigma_prior = (self.mu_prior+5.).to(DEVICE)
+        self.sigma_prior = (self.mu_prior+2.).to(DEVICE)
         
         # model variational parameters
         self.lambdal = nn.Parameter(torch.Tensor(out_features, in_features).uniform_(lower_init_lambda, upper_init_lambda))
@@ -35,7 +35,7 @@ class BayesianLinear(nn.Module):
 
         # bias priors = N(0,1)
         self.bias_mu_prior = torch.zeros(out_features, device=DEVICE)
-        self.bias_sigma_prior = (self.bias_mu_prior + 5.).to(DEVICE)
+        self.bias_sigma_prior = (self.bias_mu_prior + 2.).to(DEVICE)
 
         # # bias model variational parameters
         # self.bias_lambdal = nn.Parameter(torch.Tensor(out_features).uniform_(lower_init_lambda, upper_init_lambda))
@@ -80,6 +80,8 @@ class BayesianLinear(nn.Module):
             g = (self.alpha.detach() > 0.5) * 1.
             weight = w * g
             activations = torch.matmul(input, weight.T) + b
+            if calculate_log_probs:
+                self.alpha = g
 
         if self.training or calculate_log_probs:
 
@@ -89,6 +91,7 @@ class BayesianLinear(nn.Module):
             #            + (self.bias_sigma ** 2 + (self.bias_mu - self.bias_mu_prior) ** 2) / (2 * self.bias_sigma_prior ** 2+torch.tensor(1e-45)))
             #            + (1-self.bias_alpha)*torch.log(((1-self.bias_alpha) / (1-self.bias_alpha_prior + torch.tensor(1e-45)))+torch.tensor(1e-45))).sum()
 
+            # Want to avoid error when updating, hence I add a number close to zero
             kl_bias = (torch.log((self.bias_sigma_prior / (self.bias_sigma+torch.tensor(1e-45)))+ torch.tensor(1e-45)) 
                        - 0.5 + (self.bias_sigma ** 2 + (self.bias_mu - self.bias_mu_prior) ** 2) 
                        / (2 * self.bias_sigma_prior ** 2+torch.tensor(1e-45))).sum()

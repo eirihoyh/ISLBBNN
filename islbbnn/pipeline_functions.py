@@ -45,8 +45,8 @@ def create_data_unif(n,beta=[100,1,1,1,1], dep_level=0.5,classification=False, n
         y = beta[0] + beta[1]*x1 + beta[2]*x2 + beta[3]*x1**2 + beta[4]*x2**2 + x1*x2 # non-linear model
     else:
         y = beta[0] + beta[1]*x1 + beta[2]*x2
-    # rand0 = stats.norm.rvs(scale=0.01, size=n)
-    rand0 = stats.norm.rvs(scale=0.5, size=n)
+    rand0 = stats.norm.rvs(scale=0.01, size=n)
+    # rand0 = stats.norm.rvs(scale=0.5, size=n)
     y += rand0
     if classification:
         y -= y.min()
@@ -753,7 +753,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
 
     return mean_contribution, std_contribution
 
-def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weights, flows=False, reg=False, verbose=True, epoch=1, post_train=False):
+def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weights, verbose=True, post_train=False):
     net.train()
     old_batch = 0
     for batch in range(int(np.ceil(train_data.shape[0] / batch_size))):
@@ -765,36 +765,23 @@ def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weig
         data = _x.to(DEVICE)
         # target = _y.type(torch.LongTensor).to(DEVICE)
         target = _y.to(DEVICE)
-        # print(target)
         target = target.unsqueeze(1).float()
-        # print(target)
                 
         net.zero_grad()
-        if flows:  # TODO: Change name, this is for both flow and lrt, not used Aliaksandrs approach
-            outputs = net(data, sample=True, post_train=post_train)
-            # print(outputs)
-            negative_log_likelihood = net.loss(outputs, target)
-            # negative_log_likelihood = F.nll_loss(outputs, target, reduction="sum")
-            # if epoch <= 50:
-            #     loss = negative_log_likelihood + (epoch/50)*(net.kl() / num_batches)
-            # else:
-            loss = negative_log_likelihood + net.kl() / num_batches
-        else:
-            loss, log_prior, log_variational_posterior, negative_log_likelihood = net.sample_elbo(data, target)
+        outputs = net(data, sample=True, post_train=post_train)
+        negative_log_likelihood = net.loss(outputs, target)
+        loss = negative_log_likelihood + net.kl() / num_batches
         loss.backward()
         optimizer.step()
     
-    #if val_data != None:
-    #    print("Val data:")
-    #    test_ensemble(net, val_data, DEVICE, SAMPLES=10, flows=flows, reg=reg, verbose=True)
     if verbose:
         print('loss', loss.item())
         print('nll', negative_log_likelihood.item())
-        print('density', expected_number_of_weights(net)/nr_weights)
+        print('density', expected_number_of_weights(net)/nr_weights) # This is over ALL weights, not just active paths
         print('')
     return negative_log_likelihood.item(), loss.item()
 
-def val(net, val_data, DEVICE, flows=False, reg=False, verbose=True):
+def val(net, val_data, DEVICE, reg=False, verbose=True, post_train=False):
     '''
     NOTE: Will only validate using median model as this is 
             what we mainly care about. Reason for this is 
@@ -810,17 +797,10 @@ def val(net, val_data, DEVICE, flows=False, reg=False, verbose=True):
         # target = _y.type(torch.LongTensor).to(DEVICE)
         target = _y.to(DEVICE)
         target = target.unsqueeze(1).float()
-        if flows:
-            outputs = net(data, ensemble=False)
-            negative_log_likelihood = net.loss(outputs, target)
-            # negative_log_likelihood = F.nll_loss(outputs, target, reduction="sum")
-            loss = negative_log_likelihood + net.kl() 
-        else:
-            '''
-            TODO: Fix this such that it is correct for "normal" LBBNN models...
-            '''
-            loss, log_prior, log_variational_posterior, negative_log_likelihood = net.sample_elbo(data, target)
-
+        outputs = net(data, ensemble=False, calculate_log_probs=True, post_train=post_train)
+        negative_log_likelihood = net.loss(outputs, target)
+        # negative_log_likelihood = F.nll_loss(outputs, target, reduction="sum")
+        loss = negative_log_likelihood + net.kl()
 
         if reg:
             metric = R2Score()
@@ -840,7 +820,7 @@ def val(net, val_data, DEVICE, flows=False, reg=False, verbose=True):
 
     return negative_log_likelihood.item(), loss.item(), a
 
-def test_ensemble(net, test_data, DEVICE, SAMPLES, flows=False, reg=True, verbose=True):
+def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_train=False):
     net.eval()
     metr = []
     metr_median = []
@@ -855,17 +835,8 @@ def test_ensemble(net, test_data, DEVICE, SAMPLES, flows=False, reg=True, verbos
         target = _y.to(DEVICE)
         #outputs = torch.zeros(TEST_SAMPLES, TEST_BATCH_SIZE, 1).to(DEVICE)
         for _ in range(SAMPLES):
-            if flows:
-                outputs = net.forward(data, sample=True, ensemble=True)
-                outputs_median = net.forward(data, sample=True, ensemble=False)
-            else:
-                for l in net.linears:
-                    l.alpha = 1 / (1 + torch.exp(-l.lambdal))
-                    l.gamma.alpha = l.alpha
-
-                # sample the model
-                cgamma = [l.gamma.rsample().to(DEVICE) for l in net.linears]
-                outputs = net.forward(data, cgamma, sample=True)
+            outputs = net.forward(data, sample=True, ensemble=True, calculate_log_probs=True, post_train=post_train)
+            outputs_median = net.forward(data, sample=True, ensemble=False, calculate_log_probs=True, post_train=post_train)
 
 
             alpha_clean = clean_alpha(net, threshold=0.5)

@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers.lrt_layers import BayesianLinear
+from layers.flow_layers import BayesianLinear
 
 class BayesianNetwork(nn.Module):
-    def __init__(self, dim, p, hidden_layers, a_prior=0.05, classification=True, n_classes=1):
+    def __init__(self, dim, p, hidden_layers, a_prior=0.05, num_transforms=2, classification=True, n_classes=1):
         '''
         TODO: Add option to select perfered loss self wanting to test another loss type 
         '''
@@ -13,9 +13,9 @@ class BayesianNetwork(nn.Module):
         self.classification = classification
         self.multiclass = n_classes > 1
         # set the architecture
-        self.linears = nn.ModuleList([BayesianLinear(p, dim, a_prior=a_prior)])
-        self.linears.extend([BayesianLinear((dim+p), (dim), a_prior=a_prior) for _ in range(hidden_layers-1)])
-        self.linears.append(BayesianLinear((dim+p), n_classes, a_prior=a_prior))
+        self.linears = nn.ModuleList([BayesianLinear(p, dim, a_prior=a_prior, num_transforms=num_transforms)])
+        self.linears.extend([BayesianLinear((dim+p), (dim), a_prior=a_prior, num_transforms=num_transforms) for _ in range(hidden_layers-1)])
+        self.linears.append(BayesianLinear((dim+p), n_classes, a_prior=a_prior, num_transforms=num_transforms))
         if classification:
             if not self.multiclass: # For multiclass, F.nll_loss is used in the training loop
                 self.loss = nn.BCELoss(reduction='sum') # Setup loss (Binary cross entropy as binary classification)
@@ -26,34 +26,34 @@ class BayesianNetwork(nn.Module):
         '''
         x: 
             Input data
-        sample:
-            Draw weights from their respective probability distributions
         ensemble:
             If True, then we will use the full model. If False, we will use the median prob model
-        calculate_log_probs:
-            If the KL-divergence should be computed. Always computed when .train() is used
         post_train:
             Train using the median probability model
+        
+        TODO: sample and calculate_log_probs are not used in flow_layers, but are used in lrt_layers
+              Therefore, we should find a way s.t. we do not need to give things that are not used
+              in order to use the networks. That is, make more general...
         '''
         x_input = x.view(-1, self.p)
-        x = F.sigmoid(self.linears[0](x_input, ensemble, sample, calculate_log_probs, post_train))
+        x = F.sigmoid(self.linears[0](x_input, ensemble, post_train))
         i = 1
         for l in self.linears[1:-1]:
-            x = F.sigmoid(l(torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train))
+            x = F.sigmoid(l(torch.cat((x, x_input),1), ensemble, post_train))
             i += 1
 
         if self.classification:
             if self.multiclass:
-                out = F.log_softmax((self.linears[i](torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train)), dim=1)
+                out = F.log_softmax((self.linears[i](torch.cat((x, x_input),1), ensemble, post_train)), dim=1)
             else:
-                out = torch.sigmoid(self.linears[i](torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train))
+                out = torch.sigmoid(self.linears[i](torch.cat((x, x_input),1), ensemble, post_train))
         else:
-            out = self.linears[i](torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train)
+            out = self.linears[i](torch.cat((x, x_input),1), ensemble, post_train)
         return out
 
     def kl(self):
-        kl_sum = self.linears[0].kl
+        kl_sum = self.linears[0].kl_div()
         for l in self.linears[1:]:
-            kl_sum = kl_sum + l.kl
-        return kl_sum
+            kl_sum = kl_sum + l.kl_div()
+        return kl_sum 
     
