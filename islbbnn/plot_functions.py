@@ -87,9 +87,9 @@ def run_path_graph(net, threshold=0.5, save_path="path_graphs/all_paths_input_sk
     all_connections = pip_func.get_active_weights(clean_alpha_list)
     plot_whole_path_graph(alpha_list, all_connections, save_path=save_path, show=show)
 
-def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_input_skip", show=True):
+def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_input_skip", show=True, flow=False):
     # net = copy.deepcopy(net)
-    weight_list = pip_func.weight_matrices_numpy(net)
+    weight_list = pip_func.weight_matrices_numpy(net, flow=flow)
     clean_alpha_list = pip_func.clean_alpha(net, threshold)
     all_connections = pip_func.get_active_weights(clean_alpha_list)
     plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)

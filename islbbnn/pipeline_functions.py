@@ -126,7 +126,7 @@ def weight_matrices(net):
                 weight_matrices.append(copy.deepcopy(param.data))
     return weight_matrices
 
-def weight_matrices_numpy(net):
+def weight_matrices_numpy(net, flow=False):
     '''
     Transform all tensor mu matrices to numpy arrays
     '''
@@ -134,7 +134,34 @@ def weight_matrices_numpy(net):
     for i in range(len(w)):
         w[i] = w[i].detach().numpy()
 
+    if flow:
+        z = z_matrices_numpy(net)
+        for j in range(len(z)):
+            w[j] *= z[j]
+    
     return w
+
+def z_matrices(net):
+    '''
+    The z-values related to the flow implementation
+    '''
+    n_hidden_layers = nr_hidden_layers(net)
+    weight_matrices = []
+    for name, param in net.named_parameters():
+        for i in range(n_hidden_layers+1):
+            if f'linears.{i}.q0_mean' in name:
+                weight_matrices.append(copy.deepcopy(param.data))
+    return weight_matrices
+
+def z_matrices_numpy(net):
+    '''
+    Transform all tensor z matrices to numpy arrays
+    '''
+    z = z_matrices(net)
+    for i in range(len(z)):
+        z[i] = z[i].detach().numpy()
+
+    return z
 
 def weight_matrices_std(net):
     '''
