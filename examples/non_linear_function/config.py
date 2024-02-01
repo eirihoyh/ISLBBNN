@@ -3,7 +3,7 @@
 
 config = {}
 config['num_epochs' ] = 20  
-config['post_train_epochs'] = 20
+config['post_train_epochs'] = 10
 config['n_nets'] = 1  # Number of different networks to run for one problem
 config['n_samples'] = 4*10**4
 config['class_problem'] = True  # If classification problem or not
