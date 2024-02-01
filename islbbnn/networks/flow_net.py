@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from layers.flow_layers import BayesianLinear
 
 class BayesianNetwork(nn.Module):
-    def __init__(self, dim, p, hidden_layers, a_prior=0.05, num_transforms=2, classification=True, n_classes=1):
+    def __init__(self, dim, p, hidden_layers, a_prior=0.05, num_transforms=2, classification=True, n_classes=1, act_func=F.sigmoid):
         '''
         TODO: Add option to select perfered loss self wanting to test another loss type 
         '''
@@ -12,6 +12,7 @@ class BayesianNetwork(nn.Module):
         self.p = p
         self.classification = classification
         self.multiclass = n_classes > 1
+        self.act = act_func
         # set the architecture
         self.linears = nn.ModuleList([BayesianLinear(p, dim, a_prior=a_prior, num_transforms=num_transforms)])
         self.linears.extend([BayesianLinear((dim+p), (dim), a_prior=a_prior, num_transforms=num_transforms) for _ in range(hidden_layers-1)])
@@ -36,10 +37,10 @@ class BayesianNetwork(nn.Module):
               in order to use the networks. That is, make more general...
         '''
         x_input = x.view(-1, self.p)
-        x = F.sigmoid(self.linears[0](x_input, ensemble, post_train))
+        x = self.act(self.linears[0](x_input, ensemble, post_train))
         i = 1
         for l in self.linears[1:-1]:
-            x = F.sigmoid(l(torch.cat((x, x_input),1), ensemble, post_train))
+            x = self.act(l(torch.cat((x, x_input),1), ensemble, post_train))
             i += 1
 
         if self.classification:

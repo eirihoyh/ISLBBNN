@@ -149,7 +149,50 @@ def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, thresh
     if save_path != None:
         plt.savefig(save_path)
     plt.show()
-    
+
+
+def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, save_path=None):
+    '''
+    Empirical local explaination model. This should be used for tabular data as 
+    images usually has too many variables to get a good plot
+    '''
+    mean_contribution, std_contribution = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples)
+    for c in mean_contribution.keys():
+        labels = [str(k) for k in mean_contribution[c].keys()]
+        means = list(mean_contribution[c].values())
+        errors = list(std_contribution[c].values())
+
+        fig, ax = plt.subplots()
+
+        ax.bar(labels, means, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.set_ylabel('Contribution')
+        ax.set_xticks(labels)
+        ax.set_title(f'Empirical approach class {c}')
+
+        if save_path != None:
+            plt.savefig(save_path+f"_class_{c}")
+
+        plt.show()
+
+
+def plot_local_contribution_dist(net, data, sample=False, median=True, save_path=None):
+    cont_class = pip_func.local_explain_relu_normal_dist(net, data, sample=sample, median=median)
+    for c in cont_class.keys():
+        labels = [str(k) for k in cont_class[c].keys()]
+        means = [val[0] for val in cont_class[c].values()]
+        errors = [val[1] for val in cont_class[c].values()]
+
+        fig, ax = plt.subplots()
+
+        ax.bar(labels, means, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.set_ylabel('Contribution')
+        ax.set_xticks(labels)
+        ax.set_title(f'Distribution approach class {c}')
+
+        if save_path != None:
+            plt.savefig(save_path+f"_class_{c}")
+
+        plt.show()
 
 def get_metrics(net, threshold=0.5):
     net = copy.deepcopy(net)

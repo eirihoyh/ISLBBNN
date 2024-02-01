@@ -692,7 +692,7 @@ def find_active_weights(weights, active_nodes_list, clean_alpha_list, dim):
     
     return active_weights
 
-def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1):
+def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1, verbose=False):
     '''
     Gives local explainability for a given input when using a
     network initiated using ReLU activation.
@@ -715,7 +715,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
     '''
     contributions = {}
     for n in range(n_samples):
-        print(f"Sample nr. {n}")
+        if verbose: print(f"Sample nr. {n}")
         alphas_numpy = get_alphas_numpy(net)
         nr_classes = alphas_numpy[-1].shape[0]
         
@@ -728,7 +728,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
 
         out, output_list = relu_activation(input_data, weights, bias_weights)
         
-        print(out) # "Predicted" values after sending data through network
+        if verbose: print(out) # "Predicted" values after sending data through network
 
         # net.eval()
         # out, output_list = net.forward_preact(input_data, sample=False, ensemble=False)
@@ -779,6 +779,86 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
         std_contribution[c]["bias"] = np.std(bias_contr)
 
     return mean_contribution, std_contribution
+
+
+def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, sample=False, verbose=False):
+    '''
+    Gives local explainability in terms as a probability distribution
+    for a given input when using a network initiated using ReLU 
+    activation.
+    
+    Returns a dictionary of dictionary, indicating the class we
+    want to see contribution from, and mean and variance for the 
+    Gaussian distribution that indicates how much the variable 
+    contributes with for the given class.
+
+    TODO: Make it possible to consider the bias aswell, now we only
+    consider the covariates. 
+    NOTE: A potential weakness with this approach is that when drawing 
+    different weights, we might get different distributions, wich is not 
+    too ideal in my opition. However, this might give an indication of 
+    which parameters that are important for this specific prediction,
+    and also how much each one contributes with. 
+    '''
+    alphas_numpy = get_alphas_numpy(net)
+    nr_classes = alphas_numpy[-1].shape[0]
+    
+    weights, bias_weights, alphas_numpy = get_weight_and_bias(net, alphas_numpy, median, sample, threshold) 
+
+    # Get alpha matrices to torch to work for "clean_alpha_class" func
+    alphas = copy.deepcopy(alphas_numpy)
+    for i in range(len(alphas)):
+        alphas[i] = torch.tensor(alphas[i])
+
+    out, output_list = relu_activation(input_data, weights, bias_weights)
+    
+    if verbose: print(out) # "Predicted" values after sending data through network
+
+    # net.eval()
+    # out, output_list = net.forward_preact(input_data, sample=False, ensemble=False)
+    contribution_classes = {}
+    for c in range(nr_classes):
+        weights_class = copy.deepcopy(weights)
+        weights_class[-1] = weights_class[-1][c:c+1,:]  # Only include weights going into the class of interest
+        clean_alpha_list = clean_alpha_class(net, threshold=0.5, class_in_focus=c, alpha_list=copy.deepcopy(alphas))
+        clean_alpha_list[-1] = clean_alpha_list[-1][c:c+1,:]
+        dim, p = clean_alpha_list[0].shape
+        output_list_c = copy.deepcopy(output_list)
+        # output_list_c[-1] = output_list_c[-1][:,c:c+1] # focus on one class at-a-time
+        
+        active_nodes_list = get_active_nodes(clean_alpha_list, output_list_c)
+        # print(active_nodes_list)
+        # active_weights = find_active_weights(weights_class, active_nodes_list, clean_alpha_list, dim)
+
+        weights_mu = weight_matrices_numpy(net)
+        weights_mu[-1] = weights_mu[-1][c:c+1,:]
+        active_mu = find_active_weights(weights_mu, active_nodes_list, clean_alpha_list, dim)
+        weights_std = weight_matrices_std_numpy(net)
+        weights_std[-1] = weights_std[-1][c:c+1,:]
+        active_var = find_active_weights(weights_std, active_nodes_list, clean_alpha_list, dim)
+        for j in range(len(active_var)):
+            active_var[j] = active_var[j]**2
+        
+        pred_impact = {}
+        for pi in range(p):
+            explain_this_numpy = copy.deepcopy(input_data.detach().numpy())
+            remove_list = [True]*p
+            remove_list[pi] = False # focus on one input at-a-time
+            explain_this_numpy[0,remove_list] = 0
+            x_mu = np.array([[]])
+            x_var = np.array([[]])
+            for amu, avar in zip(active_mu, active_var):
+                x_mu = np.concatenate((x_mu, explain_this_numpy), 1)
+                x_mu = x_mu@amu.T
+                
+                x_var = np.concatenate((x_var, explain_this_numpy**2), 1)  # TODO: Check if I should rather have "explain_this_numpy**2"
+                x_var = x_var@avar.T
+
+            pred_impact[pi] = [x_mu[0,0], np.sqrt(x_var[0,0])]  # mean and std for Gaussian dist 
+    
+        contribution_classes[c] = pred_impact
+
+    return contribution_classes
 
 def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weights, verbose=True, post_train=False):
     net.train()

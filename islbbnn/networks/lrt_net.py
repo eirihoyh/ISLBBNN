@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from layers.lrt_layers import BayesianLinear
 
 class BayesianNetwork(nn.Module):
-    def __init__(self, dim, p, hidden_layers, a_prior=0.05, classification=True, n_classes=1):
+    def __init__(self, dim, p, hidden_layers, a_prior=0.05, classification=True, n_classes=1, act_func=F.sigmoid):
         '''
         TODO: Add option to select perfered loss self wanting to test another loss type 
         '''
@@ -12,6 +12,7 @@ class BayesianNetwork(nn.Module):
         self.p = p
         self.classification = classification
         self.multiclass = n_classes > 1
+        self.act = act_func
         # set the architecture
         self.linears = nn.ModuleList([BayesianLinear(p, dim, a_prior=a_prior)])
         self.linears.extend([BayesianLinear((dim+p), (dim), a_prior=a_prior) for _ in range(hidden_layers-1)])
@@ -36,10 +37,10 @@ class BayesianNetwork(nn.Module):
             Train using the median probability model
         '''
         x_input = x.view(-1, self.p)
-        x = F.sigmoid(self.linears[0](x_input, ensemble, sample, calculate_log_probs, post_train))
+        x = self.act(self.linears[0](x_input, ensemble, sample, calculate_log_probs, post_train))
         i = 1
         for l in self.linears[1:-1]:
-            x = F.sigmoid(l(torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train))
+            x = self.act(l(torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train))
             i += 1
 
         if self.classification:
