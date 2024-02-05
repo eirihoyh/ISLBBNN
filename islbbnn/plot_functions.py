@@ -158,20 +158,24 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
     '''
     mean_contribution, std_contribution = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples)
     for c in mean_contribution.keys():
-        labels = [str(k) for k in mean_contribution[c].keys()]
-        means = list(mean_contribution[c].values())
-        errors = list(std_contribution[c].values())
+        labels = np.array([str(k) for k in mean_contribution[c].keys()])
+        means = np.array(list(mean_contribution[c].values()))
+        errors = np.array(list(std_contribution[c].values()))
+
 
         if not include_bias:
             labels = labels[:-1]
             means = means[:-1]
             errors = errors[:-1]
+        
+        not_include = means != 0
 
         fig, ax = plt.subplots()
-
-        ax.bar(labels, means, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+        
+        ax.bar(labels[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(labels)
+        ax.set_xticks(labels[not_include])
+        ax.tick_params(axis='x', rotation=90)
         ax.set_title(f'Empirical approach class {c}')
 
         if save_path != None:
@@ -183,15 +187,18 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
 def plot_local_contribution_dist(net, data, sample=False, median=True, save_path=None):
     cont_class = pip_func.local_explain_relu_normal_dist(net, data, sample=sample, median=median)
     for c in cont_class.keys():
-        labels = [str(k) for k in cont_class[c].keys()]
-        means = [val[0] for val in cont_class[c].values()]
-        errors = [val[1] for val in cont_class[c].values()]
+        labels = np.array([str(k) for k in cont_class[c].keys()])
+        means = np.array([val[0] for val in cont_class[c].values()])
+        errors = np.array([val[1] for val in cont_class[c].values()])
+
+        not_include = means != 0
 
         fig, ax = plt.subplots()
-
-        ax.bar(labels, means, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+        
+        ax.bar(labels[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(labels)
+        ax.set_xticks(labels[not_include])
+        ax.tick_params(axis='x', rotation=90)
         ax.set_title(f'Distribution approach class {c}')
 
         if save_path != None:
