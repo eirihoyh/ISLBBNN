@@ -727,7 +727,6 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
             alphas[i] = torch.tensor(alphas[i])
 
         out, output_list = relu_activation(input_data, weights, bias_weights)
-        
         if verbose: print(out) # "Predicted" values after sending data through network
 
         # net.eval()

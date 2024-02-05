@@ -151,7 +151,7 @@ def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, thresh
     plt.show()
 
 
-def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, save_path=None):
+def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None):
     '''
     Empirical local explaination model. This should be used for tabular data as 
     images usually has too many variables to get a good plot
@@ -161,6 +161,11 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
         labels = [str(k) for k in mean_contribution[c].keys()]
         means = list(mean_contribution[c].values())
         errors = list(std_contribution[c].values())
+
+        if not include_bias:
+            labels = labels[:-1]
+            means = means[:-1]
+            errors = errors[:-1]
 
         fig, ax = plt.subplots()
 
