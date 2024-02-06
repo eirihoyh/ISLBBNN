@@ -18,8 +18,10 @@ class BayesianNetwork(nn.Module):
         self.linears.extend([BayesianLinear((dim+p), (dim), a_prior=a_prior) for _ in range(hidden_layers-1)])
         self.linears.append(BayesianLinear((dim+p), n_classes, a_prior=a_prior))
         if classification:
-            if not self.multiclass: # For multiclass, F.nll_loss is used in the training loop
+            if not self.multiclass: 
                 self.loss = nn.BCELoss(reduction='sum') # Setup loss (Binary cross entropy as binary classification)
+            else:
+                self.loss = nn.NLLLoss(reduction='sum')
         else:
             self.loss = nn.MSELoss(reduction='sum')     # Setup loss (Mean Squared Error loss as regression problem)
             

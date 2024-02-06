@@ -859,7 +859,7 @@ def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, 
 
     return contribution_classes
 
-def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weights, verbose=True, post_train=False):
+def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weights, multiclass=False, verbose=True, post_train=False):
     net.train()
     old_batch = 0
     for batch in range(int(np.ceil(train_data.shape[0] / batch_size))):
@@ -869,9 +869,11 @@ def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weig
         
         old_batch = batch_size * batch
         data = _x.to(DEVICE)
-        # target = _y.type(torch.LongTensor).to(DEVICE)
-        target = _y.to(DEVICE)
-        target = target.unsqueeze(1).float()
+        if multiclass:
+            target = _y.type(torch.LongTensor).to(DEVICE)
+        else:
+            target = _y.to(DEVICE)
+            target = target.unsqueeze(1).float()
                 
         net.zero_grad()
         outputs = net(data, sample=True, post_train=post_train)
@@ -887,7 +889,7 @@ def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weig
         print('')
     return negative_log_likelihood.item(), loss.item()
 
-def val(net, val_data, DEVICE, reg=False, verbose=True, post_train=False):
+def val(net, val_data, DEVICE, multiclass=False, reg=False, verbose=True, post_train=False):
     '''
     NOTE: Will only validate using median model as this is 
             what we mainly care about. Reason for this is 
@@ -900,24 +902,26 @@ def val(net, val_data, DEVICE, reg=False, verbose=True, post_train=False):
         _x = val_data[:, :-1]
         _y = val_data[:, -1]
         data = _x.to(DEVICE)
-        # target = _y.type(torch.LongTensor).to(DEVICE)
-        target = _y.to(DEVICE)
-        target = target.unsqueeze(1).float()
+        if multiclass:
+            target = _y.type(torch.LongTensor).to(DEVICE)
+        else:
+            target = _y.to(DEVICE)
+            target = target.unsqueeze(1).float()
         outputs = net(data, ensemble=False, calculate_log_probs=True, post_train=post_train)
         negative_log_likelihood = net.loss(outputs, target)
-        # negative_log_likelihood = F.nll_loss(outputs, target, reduction="sum")
         loss = negative_log_likelihood + net.kl()
 
         if reg:
             metric = R2Score()
             a = metric(outputs.T[0], target.T[0]).detach().numpy()
         else:
-            output1 = outputs#.T.mean(0)
-            
-            class_pred = output1.round().squeeze()
-            # class_pred = output1.max(1, keepdim=True)[1]
-            a = np.mean((class_pred.detach().numpy() == target.detach().numpy().T[0]) * 1)
-            # a = class_pred.eq(target.view_as(class_pred)).sum().item() / len(target)
+            if multiclass:
+                output1 = outputs#.T.mean(0)
+                class_pred = output1.max(1, keepdim=True)[1]
+                a = class_pred.eq(target.view_as(class_pred)).sum().item() / len(target)
+            else:
+                class_pred = outputs.round().squeeze()
+                a = np.mean((class_pred.detach().numpy() == target.detach().numpy().T[0]) * 1)
     
     alpha_clean = clean_alpha(net, threshold=0.5)
     density_median, used_weigths_median, _ = network_density_reduction(alpha_clean)
@@ -926,7 +930,7 @@ def val(net, val_data, DEVICE, reg=False, verbose=True, post_train=False):
 
     return negative_log_likelihood.item(), loss.item(), a
 
-def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_train=False):
+def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_train=False, multiclass=False):
     net.eval()
     metr = []
     metr_median = []
@@ -959,13 +963,23 @@ def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_
                 a_rmse = np.sqrt(mse(outputs.T[0], target).detach().numpy())
                 a_median_rmse = np.sqrt(mse(outputs_median.T[0], target).detach().numpy())
             else:
-                output1 = outputs.T.mean(0)
-                class_pred = output1.round().squeeze()
-                a = np.mean((class_pred.detach().numpy() == target.detach().numpy()) * 1)
+                if multiclass:
+                    output1 = outputs#.T.mean(0)
+                    class_pred = output1.max(1, keepdim=True)[1]
+                    a = class_pred.eq(target.view_as(class_pred)).sum().item() / len(target)
 
-                output1_median = outputs_median.T.mean(0)
-                class_pred_median = output1_median.round().squeeze()
-                a_median = np.mean((class_pred_median.detach().numpy() == target.detach().numpy()) * 1)
+                    output1_median = outputs_median#.T.mean(0)
+                    class_pred_median = output1_median.max(1, keepdim=True)[1]
+                    a_median = class_pred_median.eq(target.view_as(class_pred_median)).sum().item() / len(target)
+                else:
+                    output1 = outputs.T.mean(0)
+                    class_pred = output1.round().squeeze()
+                    a = np.mean((class_pred.detach().numpy() == target.detach().numpy()) * 1)
+
+                    output1_median = outputs_median.T.mean(0)
+                    class_pred_median = output1_median.round().squeeze()
+                    a_median = np.mean((class_pred_median.detach().numpy() == target.detach().numpy()) * 1)
+                
                 # output1 = outputs
                 # class_pred = output1.max(1, keepdim=True)[1]
                 # a = class_pred.eq(target.view_as(class_pred)).sum().item() / len(target)
