@@ -206,6 +206,19 @@ def plot_local_contribution_dist(net, data, sample=False, median=True, save_path
 
         plt.show()
 
+def plot_path_individual_classes(net, CLASSES, path="individual_classes"):
+    for c in range(CLASSES):
+        include_list = [True]*CLASSES
+        include_list[c] = False
+        a = pip_func.get_alphas(net)
+        a[-1][include_list,:] = 0
+        clean_a = pip_func.clean_alpha(net, 0.5, alpha_list=a)
+        print("Used weights: ", sum([np.sum(ai.detach().numpy()) for ai in clean_a]))
+
+        all_connections = pip_func.get_active_weights(clean_a)
+
+        plot_whole_path_graph(a, all_connections, save_path=path + f"/class{c}", show=False)
+
 def get_metrics(net, threshold=0.5):
     net = copy.deepcopy(net)
     # alpha_list = get_alphas(net)
