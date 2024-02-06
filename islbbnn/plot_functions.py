@@ -1,6 +1,8 @@
 import numpy as np
+from scipy import stats
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from matplotlib.colors import TwoSlopeNorm
 import torch
 import copy
 from graphviz import Digraph
@@ -95,62 +97,6 @@ def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_i
     plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
 
 
-def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, threshold=0.5, thresh_w=0.0, save_path=None):
-    '''
-    NOTE: Works just for quadratic images atm, should probably generalize to prefered
-            dim at a later point
-    '''
-    
-    colors = ["white", "red"]
-    cmap = mcolors.LinearSegmentedColormap.from_list("", colors)
-    
-    clean_a = pip_func.clean_alpha_class(net, threshold,class_in_focus=c)
-    p = clean_a[0].shape[1]
-    img_avg = np.zeros(p)
-
-    w = pip_func.weight_matrices(net)[-1][c, -p*p:].detach().numpy()
-    w = np.where(clean_a[-1][c,-p*p:].detach().numpy() == 1, w, 0)
-    
-    avg_c_img = train_data[train_target == c].mean(axis=0)
-
-    fig, axs = plt.subplots(len(clean_a)+1, figsize=(10,10))
-    
-    for ind, ca in enumerate(clean_a):
-        out = ca.shape[0]
-        img_layer = np.zeros(p)
-        for j in range(out):
-            # img_layer += ca[j,-p:].detach().numpy()
-            img_layer += np.where(np.abs(w) >= thresh_w, ca[j,-p:].detach().numpy(), 0)
-
-        img_avg += img_layer
-        axs[ind].imshow(avg_c_img, cmap="Greys", vmin=torch.min(avg_c_img), vmax=torch.max(avg_c_img))
-        if np.sum(img_layer) > 0:
-            im = axs[ind].imshow(img_layer.reshape((p,p)), cmap=cmap, alpha=0.5)#, vmin=min_max*-1, vmax=min_max*1)
-        else:
-            im = axs[ind].imshow(img_layer.reshape((p,p)), cmap=cmap, alpha=0.5, vmin=0, vmax=1)
-            
-        fig.colorbar(im, ax=axs[ind])
-        axs[ind].set_title(f"Class {c}, Layer {ind}")
-        axs[ind].set_xticks([])
-        axs[ind].set_yticks([])
-        
-
-    # min_max = max(np.concatenate((img_pos, img_neg*-1)))
-    min_max = max(np.concatenate((img_avg, img_avg*-1)))
-
-    
-    axs[ind+1].imshow(avg_c_img, cmap="Greys", vmin=torch.min(avg_c_img), vmax=torch.max(avg_c_img))
-    im = axs[ind+1].imshow(img_avg.reshape((28,28)), cmap=cmap, alpha=0.5, vmin=0, vmax=min_max*1)
-    axs[ind+1].set_title(f"Net: {net_nr} all layers")
-    axs[ind+1].set_xticks([])
-    axs[ind+1].set_yticks([])
-    fig.colorbar(im, ax=axs[ind+1])
-    plt.tight_layout()
-    if save_path != None:
-        plt.savefig(save_path)
-    plt.show()
-
-
 def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None):
     '''
     Empirical local explaination model. This should be used for tabular data as 
@@ -218,6 +164,159 @@ def plot_path_individual_classes(net, CLASSES, path="individual_classes"):
         all_connections = pip_func.get_active_weights(clean_a)
 
         plot_whole_path_graph(a, all_connections, save_path=path + f"/class{c}", show=False)
+
+def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, threshold=0.5, thresh_w=0.0, save_path=None):
+    '''
+    NOTE: Works just for quadratic images atm, should probably generalize to prefered
+            dim at a later point
+    '''
+    
+    colors = ["white", "red"]
+    cmap = mcolors.LinearSegmentedColormap.from_list("", colors)
+    
+    clean_a = pip_func.clean_alpha_class(net, threshold,class_in_focus=c)
+    p = int(clean_a[0].shape[1]**0.5)
+    img_avg = np.zeros(p*p)
+
+    w = pip_func.weight_matrices(net)[-1][c, -p*p:].detach().numpy()
+    w = np.where(clean_a[-1][c,-p*p:].detach().numpy() == 1, w, 0)
+    
+    avg_c_img = train_data[train_target == c].mean(axis=0).reshape((p,p))
+
+    fig, axs = plt.subplots(len(clean_a)+1, figsize=(10,10))
+    
+    for ind, ca in enumerate(clean_a):
+        out = ca.shape[0]
+        img_layer = np.zeros(p*p)
+        for j in range(out):
+            # img_layer += ca[j,-p:].detach().numpy()
+            img_layer += np.where(np.abs(w) >= thresh_w, ca[j,-p*p:].detach().numpy(), 0)
+
+        img_avg += img_layer
+        axs[ind].imshow(avg_c_img, cmap="Greys", vmin=torch.min(avg_c_img), vmax=torch.max(avg_c_img))
+        if np.sum(img_layer) > 0:
+            im = axs[ind].imshow(img_layer.reshape((p,p)), cmap=cmap, alpha=0.5)#, vmin=min_max*-1, vmax=min_max*1)
+        else:
+            im = axs[ind].imshow(img_layer.reshape((p,p)), cmap=cmap, alpha=0.5, vmin=0, vmax=1)
+            
+        fig.colorbar(im, ax=axs[ind])
+        axs[ind].set_title(f"Class {c}, Layer {ind}")
+        axs[ind].set_xticks([])
+        axs[ind].set_yticks([])
+        
+
+    # min_max = max(np.concatenate((img_pos, img_neg*-1)))
+    min_max = max(np.concatenate((img_avg, img_avg*-1)))
+
+    
+    axs[ind+1].imshow(avg_c_img, cmap="Greys", vmin=torch.min(avg_c_img), vmax=torch.max(avg_c_img))
+    im = axs[ind+1].imshow(img_avg.reshape((p,p)), cmap=cmap, alpha=0.5, vmin=0, vmax=min_max*1)
+    axs[ind+1].set_title(f"Net: {net_nr} all layers")
+    axs[ind+1].set_xticks([])
+    axs[ind+1].set_yticks([])
+    fig.colorbar(im, ax=axs[ind+1])
+    plt.tight_layout()
+    if save_path != None:
+        plt.savefig(save_path)
+    plt.show()
+
+def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, sample=True, median=True, n_samples=100):
+    '''
+    NOTE: Only works for ReLU based networks 
+    '''
+    mean_contribution, std_contribution = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples)
+
+    p = int(explain_this.shape[-1]**0.5)
+
+    colors_mean = ["blue", "white", "red"]
+    colors_std = ["blue", "white", "red"]
+    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
+    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
+    used_img = explain_this.reshape((p,p))
+    for c in range(n_classes):
+        explained_mean = np.array(list(mean_contribution[c].values())[:-1]).reshape((p,p))
+        maxima_mean = explained_mean.max()
+        minima_mean = explained_mean.min()
+
+        explained_std = np.array(list(std_contribution[c].values())[:-1]).reshape((p,p))
+        maxima_std = explained_std.max()
+        minima_std = explained_std.min()
+        fig, axs = plt.subplots(1,2, figsize=(8,8))
+        
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
+        norm_mean = TwoSlopeNorm(vmin=minima_mean-0.001, vcenter=0, vmax=maxima_mean+0.001)
+        im = axs[0].imshow(explained_mean, cmap=cmap_mean, alpha=0.5, norm=norm_mean)
+        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+
+        norm_std = TwoSlopeNorm(vmin=minima_std-0.001, vcenter=0, vmax=maxima_std+0.001)
+        im = axs[1].imshow(explained_std, cmap=cmap_std, alpha=0.5, norm=norm_std)
+        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+        
+        axs[0].set_title("Mean contribution")
+        axs[1].set_title("Std contribution")
+
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        axs[1].set_xticks([])
+        axs[1].set_yticks([])
+
+        fig.suptitle(f"Local explain class: {c}")
+        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
+        plt.show()
+
+def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, sample=False, median=True):
+    cont_class = pip_func.local_explain_relu_normal_dist(net, explain_this, sample=sample, median=median)
+    colors_mean = ["blue", "white", "red"]
+    colors_std = ["blue", "white", "red"]
+    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
+    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
+    p = int(explain_this.shape[-1]**0.5)
+    used_img = explain_this.reshape((p,p))
+    for i in range(n_classes):
+        alli = np.array(list(cont_class[i].values()))
+        mu = alli[:,0]
+        std = alli[:,1]
+        explained_025 = np.where(std > 0, stats.norm.ppf(0.025, mu, std), 0).reshape((p,p))
+        maxima_025 = explained_025.max()
+        minima_025 = explained_025.min()
+
+        explained_975 = np.where(std > 0, stats.norm.ppf(0.975, mu, std), 0).reshape((p,p))
+        maxima_975 = explained_975.max()
+        minima_975 = explained_975.min()
+        fig, axs = plt.subplots(1,2, figsize=(8,8))
+
+
+        maxima = np.max([maxima_025, maxima_975])
+        minima = np.min([minima_025, minima_975])
+                
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
+        norm_mean = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[0].imshow(explained_025, cmap=cmap_mean, alpha=0.5, norm=norm_mean)
+        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+
+        norm_std = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[1].imshow(explained_975, cmap=cmap_std, alpha=0.5, norm=norm_std)
+        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+        
+        axs[0].set_title("0.025 quantile")
+        axs[1].set_title("0.975 quantile")
+
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        axs[1].set_xticks([])
+        axs[1].set_yticks([])
+        # Set colorbar ticks and labels
+        # cbar.set_ticks([-1, 0, 1])  # Set ticks at -1, 0, and 1
+        # cbar.set_ticklabels(['Low', 'Medium', 'High'])  # Set tick labels
+        fig.suptitle(f"Local explain class: {i}")
+        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
+        plt.show()
 
 def get_metrics(net, threshold=0.5):
     net = copy.deepcopy(net)
