@@ -1,0 +1,137 @@
+strict digraph "All paths!" {
+	I_4
+	Output_0
+	I_4 -> Output_0 [label="w=25.45"]
+	I_12
+	I_12 -> Output_0 [label="w=2.51"]
+	I_15
+	I_15 -> Output_0 [label="w=-14.30"]
+	I_32
+	I_32 -> Output_0 [label="w=-30.14"]
+	I_34
+	I_34 -> Output_0 [label="w=2.00"]
+	I_39
+	I_39 -> Output_0 [label="w=3.99"]
+	I_42
+	I_42 -> Output_0 [label="w=-5.00"]
+	I_56
+	I_56 -> Output_0 [label="w=-5.44"]
+	I_17
+	Output_1
+	I_17 -> Output_1 [label="w=20.04"]
+	I_20
+	I_20 -> Output_1 [label="w=20.38"]
+	I_21
+	I_21 -> Output_1 [label="w=9.29"]
+	I_30
+	I_30 -> Output_1 [label="w=-24.53"]
+	I_34 -> Output_1 [label="w=-1.98"]
+	I_39 -> Output_1 [label="w=13.32"]
+	I_43
+	I_43 -> Output_1 [label="w=10.82"]
+	I_55
+	I_55 -> Output_1 [label="w=-23.25"]
+	I_56 -> Output_1 [label="w=-5.35"]
+	I_57
+	I_57 -> Output_1 [label="w=18.46"]
+	I_62
+	I_62 -> Output_1 [label="w=19.18"]
+	I_65
+	I_65 -> Output_1 [label="w=-5.12"]
+	Output_2
+	I_15 -> Output_2 [label="w=35.13"]
+	I_17 -> Output_2 [label="w=-18.00"]
+	I_30 -> Output_2 [label="w=-23.83"]
+	I_34 -> Output_2 [label="w=4.59"]
+	I_45
+	I_45 -> Output_2 [label="w=-15.24"]
+	I_46
+	I_46 -> Output_2 [label="w=4.30"]
+	I_49
+	I_49 -> Output_2 [label="w=-22.82"]
+	I_61
+	I_61 -> Output_2 [label="w=-22.22"]
+	I_65 -> Output_2 [label="w=1.63"]
+	I_1
+	Output_3
+	I_1 -> Output_3 [label="w=-55.89"]
+	I_4 -> Output_3 [label="w=36.78"]
+	I_30 -> Output_3 [label="w=-4.91"]
+	I_32 -> Output_3 [label="w=26.69"]
+	I_33
+	I_33 -> Output_3 [label="w=13.21"]
+	I_34 -> Output_3 [label="w=3.10"]
+	I_39 -> Output_3 [label="w=-29.58"]
+	I_41
+	I_41 -> Output_3 [label="w=-15.02"]
+	I_46 -> Output_3 [label="w=-3.59"]
+	I_48
+	I_48 -> Output_3 [label="w=-11.40"]
+	I_53
+	I_53 -> Output_3 [label="w=5.28"]
+	I_55 -> Output_3 [label="w=2.53"]
+	I_56 -> Output_3 [label="w=3.93"]
+	I_61 -> Output_3 [label="w=6.81"]
+	I_62 -> Output_3 [label="w=-13.86"]
+	I_65 -> Output_3 [label="w=-3.34"]
+	I_70
+	I_70 -> Output_3 [label="w=8.33"]
+	I_0
+	Output_4
+	I_0 -> Output_4 [label="w=16.97"]
+	I_15 -> Output_4 [label="w=-6.92"]
+	I_17 -> Output_4 [label="w=7.04"]
+	I_21 -> Output_4 [label="w=-19.48"]
+	I_30 -> Output_4 [label="w=24.42"]
+	I_34 -> Output_4 [label="w=-1.25"]
+	I_42 -> Output_4 [label="w=5.85"]
+	I_46 -> Output_4 [label="w=-3.46"]
+	I_56 -> Output_4 [label="w=-5.62"]
+	I_63
+	I_63 -> Output_4 [label="w=3.81"]
+	I_69
+	I_69 -> Output_4 [label="w=7.98"]
+	I_70 -> Output_4 [label="w=-9.31"]
+	I_76
+	I_76 -> Output_4 [label="w=10.29"]
+	Output_5
+	I_1 -> Output_5 [label="w=9.02"]
+	I_34 -> Output_5 [label="w=-4.40"]
+	I_42 -> Output_5 [label="w=-11.15"]
+	I_43 -> Output_5 [label="w=19.81"]
+	I_46 -> Output_5 [label="w=3.50"]
+	I_48 -> Output_5 [label="w=5.82"]
+	I_53 -> Output_5 [label="w=-6.27"]
+	I_55 -> Output_5 [label="w=-17.31"]
+	I_57 -> Output_5 [label="w=8.49"]
+	I_61 -> Output_5 [label="w=8.52"]
+	I_70 -> Output_5 [label="w=-10.41"]
+	Output_6
+	I_21 -> Output_6 [label="w=16.27"]
+	I_24
+	I_24 -> Output_6 [label="w=-16.79"]
+	I_30 -> Output_6 [label="w=16.86"]
+	I_32 -> Output_6 [label="w=23.76"]
+	I_34 -> Output_6 [label="w=0.81"]
+	I_42 -> Output_6 [label="w=-17.16"]
+	I_46 -> Output_6 [label="w=-1.80"]
+	I_50
+	I_50 -> Output_6 [label="w=15.26"]
+	I_53 -> Output_6 [label="w=8.98"]
+	I_57 -> Output_6 [label="w=-10.60"]
+	I_61 -> Output_6 [label="w=-14.91"]
+	I_68
+	I_68 -> Output_6 [label="w=-9.68"]
+	I_70 -> Output_6 [label="w=12.77"]
+	I_76 -> Output_6 [label="w=-24.04"]
+	Output_7
+	I_15 -> Output_7 [label="w=-7.12"]
+	I_32 -> Output_7 [label="w=28.79"]
+	I_41 -> Output_7 [label="w=8.08"]
+	I_46 -> Output_7 [label="w=5.07"]
+	I_56 -> Output_7 [label="w=2.87"]
+	I_60
+	I_60 -> Output_7 [label="w=-15.55"]
+	I_76 -> Output_7 [label="w=-10.93"]
+	"All paths" [shape=Msquare]
+}
