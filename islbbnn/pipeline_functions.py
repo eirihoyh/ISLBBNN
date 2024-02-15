@@ -518,7 +518,7 @@ def average_path_length(clean_alpha_list):
             it should...
     """
     length_list = len(clean_alpha_list)
-    p = clean_alpha_list[0].shape[0]
+    p = clean_alpha_list[0].shape[1]
     sum_dists = np.array([])
     # Check from intput to output
     for i in range(length_list):
