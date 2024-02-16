@@ -938,6 +938,9 @@ def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_
     used_weights = []
     ensemble = []
     ensemble_median = []
+    if reg:
+        ensemble_r2 = []
+        ensemble_r2_median = []
     with torch.no_grad():
         _x = test_data[:, :-1]
         _y = test_data[:, -1]
@@ -991,6 +994,8 @@ def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_
             if reg:
                 ensemble.append(a_rmse)
                 ensemble_median.append(a_median_rmse)
+                ensemble_r2.append(a_r2)
+                ensemble_r2_median.append(a_median_r2)
             else:
                 ensemble.append(a)
                 ensemble_median.append(a_median)
@@ -1000,6 +1005,9 @@ def test_ensemble(net, test_data, DEVICE, SAMPLES, reg=True, verbose=True, post_
         metr.append(np.mean(density))
         metr_median.append(np.mean(ensemble_median))
         metr_median.append(np.mean(used_weights))
+        if reg:
+            metr.append(np.mean(ensemble_r2))
+            metr_median.append(np.mean(ensemble_r2_median))
 
     if verbose:
         print(np.mean(density), 'density median')

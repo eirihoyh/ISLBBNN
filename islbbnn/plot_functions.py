@@ -97,55 +97,72 @@ def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_i
     plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
 
 
-def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None):
+def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None):
     '''
     Empirical local explaination model. This should be used for tabular data as 
     images usually has too many variables to get a good plot
     '''
+    variable_names = copy.deepcopy(variable_names)
     mean_contribution, std_contribution = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples)
+    if class_names == None:
+        class_names = np.arange(n_classes)
+    if variable_names == None:
+        variable_names = np.arange(data.shape[-1])
+        variable_names = list(variable_names.astype(str))
+    variable_names.append("bias")
+    variable_names = np.array(variable_names)
     for c in mean_contribution.keys():
-        labels = np.array([str(k) for k in mean_contribution[c].keys()])
+        # labels = np.array([str(k) for k in mean_contribution[c].keys()])
         means = np.array(list(mean_contribution[c].values()))
-        errors = np.array(list(std_contribution[c].values()))
+        errors = np.array(list(std_contribution[c].values()))*2  # Times 2 to get a more accurate interval
 
 
         if not include_bias:
-            labels = labels[:-1]
+            # labels = labels[:-1]
             means = means[:-1]
             errors = errors[:-1]
+            variable_names = variable_names[:-1]
         
         not_include = means != 0
 
         fig, ax = plt.subplots()
         
-        ax.bar(labels[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(labels[not_include])
+        ax.set_xticks(variable_names[not_include])
         ax.tick_params(axis='x', rotation=90)
-        ax.set_title(f'Empirical approach class {c}')
-
+        ax.set_title(f'Empirical explaination of {class_names[c]}')
+        ax.grid()
         if save_path != None:
-            plt.savefig(save_path+f"_class_{c}")
+            plt.savefig(save_path+f"_class_{class_names[c]}")
 
         plt.show()
 
 
-def plot_local_contribution_dist(net, data, sample=False, median=True, save_path=None):
+def plot_local_contribution_dist(net, data, sample=False, median=True, save_path=None, class_names=None, variable_names=None):
     cont_class = pip_func.local_explain_relu_normal_dist(net, data, sample=sample, median=median)
+    n_classes = len(cont_class.keys())
+    if class_names == None:
+        class_names = np.arange(n_classes)
+    if variable_names == None:
+        variable_names = np.arange(data.shape[-1])
+        variable_names = list(variable_names.astype(str))
+    variable_names = np.array(variable_names)
     for c in cont_class.keys():
-        labels = np.array([str(k) for k in cont_class[c].keys()])
+        # labels = np.array([str(k) for k in cont_class[c].keys()])
         means = np.array([val[0] for val in cont_class[c].values()])
-        errors = np.array([val[1] for val in cont_class[c].values()])
+        errors = np.array([val[1] for val in cont_class[c].values()])*2
 
         not_include = means != 0
 
         fig, ax = plt.subplots()
         
-        ax.bar(labels[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(labels[not_include])
+        ax.set_xticks(variable_names[not_include])
         ax.tick_params(axis='x', rotation=90)
-        ax.set_title(f'Distribution approach class {c}')
+        ax.set_title(f'Distribution explaination of {class_names[c]}')
+        ax.grid()
 
         if save_path != None:
             plt.savefig(save_path+f"_class_{c}")
