@@ -616,6 +616,40 @@ def complexity_measure(net, p, rand_numbs):
 
     return mc_int_first, mc_int_second, combined_complexity
 
+def second_derivative_output_multiclass(net,p,rand_numbs,classes):
+    second_der = {}
+    for c in range(classes):
+        second_der[c] = {}
+        for i in range(p):
+            second_der[c][i] = []
+    for c in range(classes):
+        for j in range(len(rand_numbs)):
+            _x = rand_numbs[j].view(-1,p).clone().detach().requires_grad_(True)
+            net.eval()
+            out = net.forward_preact(_x)[:,c]
+            first_der = torch.autograd.grad(out, _x,  create_graph=True, retain_graph=True)[0][0]
+            for i in range(p):
+                s_der = torch.autograd.grad(first_der[i], _x, retain_graph=True)[0].cpu().detach().numpy()
+                second_der[c][i].append(s_der[0][i])
+
+    return second_der
+
+def complexity_measure_multiclass(net,p,rand_numbs,classes):
+    second = second_derivative_output_multiclass(net, p, rand_numbs,classes)
+    mc_int_second = {}  # Second derviative "complexity"
+    combined_complexity_class = {}
+    for c in range(classes):
+        mc_int_second[c] = {}
+        for i in range(p):
+            mc_int_second[c][i] = np.mean(np.array(second[c][i])**2)  # This is the complexity for each input
+
+    for c in range(classes):
+        combined_complexity_class[c] = np.sum([k for k in mc_int_second[c].values()])
+    
+    combined_complexity = np.sum([k for k in combined_complexity_class.values()])  # The "cumulative" complexity
+
+    return mc_int_second, combined_complexity_class, combined_complexity, second
+
 
 def get_weight_and_bias(net, alphas_numpy, median=True, sample=False, threshold=0.5):
     weights = weight_matrices_numpy(net)
