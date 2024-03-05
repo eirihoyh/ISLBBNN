@@ -726,7 +726,7 @@ def find_active_weights(weights, active_nodes_list, clean_alpha_list, dim):
     
     return active_weights
 
-def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1, verbose=False):
+def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1, verbose=False, quantiles=[0.025,0.975]):
     '''
     Gives local explainability for a given input when using a
     network initiated using ReLU activation.
@@ -748,6 +748,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
     contributing to the given prediction.
     '''
     contributions = {}
+    preds = []
     for n in range(n_samples):
         if verbose: print(f"Sample nr. {n}")
         alphas_numpy = get_alphas_numpy(net)
@@ -762,7 +763,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
 
         out, output_list = relu_activation(input_data, weights, bias_weights)
         if verbose: print(out) # "Predicted" values after sending data through network
-
+        preds.append(out)
         # net.eval()
         # out, output_list = net.forward_preact(input_data, sample=False, ensemble=False)
         contribution_classes = {}
@@ -797,21 +798,21 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
         contributions[n] = contribution_classes
 
     mean_contribution = {}
-    std_contribution = {}
+    cred_contribution = {}
     for c in range(nr_classes):
         mean_contribution[c] = {}
-        std_contribution[c] = {}
+        cred_contribution[c] = {}
         for pi in range(p):
             values = np.zeros(n_samples)
             for s in range(n_samples):
                 values[s] = contributions[s][c][pi]
             mean_contribution[c][pi] = np.mean(values)
-            std_contribution[c][pi] = np.std(values)
+            cred_contribution[c][pi] = np.diff(np.quantile(values, quantiles)) # diff CI, uses 95\% as standard
         bias_contr = np.array([contributions[s][c]["bias"] for s in range(n_samples)])
         mean_contribution[c]["bias"] = np.mean(bias_contr)
-        std_contribution[c]["bias"] = np.std(bias_contr)
+        cred_contribution[c]["bias"] = np.diff(np.quantile(bias_contr, quantiles))
 
-    return mean_contribution, std_contribution
+    return mean_contribution, cred_contribution, np.array(preds)
 
 
 def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, sample=False, verbose=False):

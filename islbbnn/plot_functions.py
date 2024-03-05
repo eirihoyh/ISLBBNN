@@ -97,13 +97,13 @@ def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_i
     plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
 
 
-def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None):
+def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None, quantiles=[0.025,0.975], include_zero_means=True):
     '''
     Empirical local explaination model. This should be used for tabular data as 
     images usually has too many variables to get a good plot
     '''
     variable_names = copy.deepcopy(variable_names)
-    mean_contribution, std_contribution = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples)
+    mean_contribution, cred_contribution, preds = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
     if class_names == None:
         class_names = np.arange(n_classes)
     if variable_names == None:
@@ -111,25 +111,37 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
         variable_names = list(variable_names.astype(str))
     variable_names.append("bias")
     variable_names = np.array(variable_names)
+
+    preds_means = np.mean(preds,0)[0]
     for c in mean_contribution.keys():
+        preds_errors = np.diff(np.quantile(preds[:,:,c], quantiles))
+        variable_names_class = copy.deepcopy(variable_names)
         # labels = np.array([str(k) for k in mean_contribution[c].keys()])
         means = np.array(list(mean_contribution[c].values()))
-        errors = np.array(list(std_contribution[c].values()))*2  # Times 2 to get a more accurate interval
+        errors = np.array(list(cred_contribution[c].values()))
 
 
         if not include_bias:
             # labels = labels[:-1]
             means = means[:-1]
             errors = errors[:-1]
-            variable_names = variable_names[:-1]
+            variable_names_class = variable_names_class[:-1]
         
-        not_include = means != 0
+        if not include_zero_means:
+            not_include = means != 0
+            variable_names_class = variable_names_class[not_include]
+            means = means[not_include]
+            errors = errors[not_include]
+
+        means = np.append(means, preds_means[c])
+        errors = np.append(errors, preds_errors)
+        variable_names_class = np.append(variable_names_class, "Prediction")
 
         fig, ax = plt.subplots()
         
-        ax.bar(variable_names[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names_class, means, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(variable_names[not_include])
+        ax.set_xticks(variable_names_class)
         ax.tick_params(axis='x', rotation=90)
         ax.set_title(f'Empirical explaination of {class_names[c]}')
         ax.grid()
