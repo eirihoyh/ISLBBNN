@@ -263,43 +263,45 @@ def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, thresh
         plt.savefig(save_path)
     plt.show()
 
-def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, sample=True, median=True, n_samples=100):
+def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975]):
     '''
     NOTE: Only works for ReLU based networks 
     '''
-    mean_contribution, std_contribution = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples)
+    _, cred_contribution, _ = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
 
     p = int(explain_this.shape[-1]**0.5)
 
-    colors_mean = ["blue", "white", "red"]
-    colors_std = ["blue", "white", "red"]
-    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
-    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
+    colors_025 = ["blue", "white", "red"]
+    colors_975 = ["blue", "white", "red"]
+    cmap_025 = mcolors.LinearSegmentedColormap.from_list("", colors_025)
+    cmap_975 = mcolors.LinearSegmentedColormap.from_list("", colors_975)
     used_img = explain_this.reshape((p,p))
     for c in range(n_classes):
-        explained_mean = np.array(list(mean_contribution[c].values())[:-1]).reshape((p,p))
-        maxima_mean = explained_mean.max()
-        minima_mean = explained_mean.min()
+        explained_c = np.array(list(cred_contribution[c].values())[:-1])
+        explained_025 = explained_c[:,0].reshape((p,p))
+        explained_975 = explained_c[:,1].reshape((p,p))
+        
+        maxima_025 = explained_025.max()
+        minima_025 = explained_025.min()
+        maxima_975 = explained_975.max()
+        minima_975 = explained_975.min()
 
-        explained_std = np.array(list(std_contribution[c].values())[:-1]).reshape((p,p))
-        maxima_std = explained_std.max()
-        minima_std = explained_std.min()
         fig, axs = plt.subplots(1,2, figsize=(8,8))
         
         axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
         axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        norm_mean = TwoSlopeNorm(vmin=minima_mean-0.001, vcenter=0, vmax=maxima_mean+0.001)
-        im = axs[0].imshow(explained_mean, cmap=cmap_mean, alpha=0.5, norm=norm_mean)
+        norm_025 = TwoSlopeNorm(vmin=minima_025-0.001, vcenter=0, vmax=maxima_025+0.001)
+        im = axs[0].imshow(explained_025, cmap=cmap_025, alpha=0.5, norm=norm_025)
         cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
 
-        norm_std = TwoSlopeNorm(vmin=minima_std-0.001, vcenter=0, vmax=maxima_std+0.001)
-        im = axs[1].imshow(explained_std, cmap=cmap_std, alpha=0.5, norm=norm_std)
+        norm_975 = TwoSlopeNorm(vmin=minima_975-0.001, vcenter=0, vmax=maxima_975+0.001)
+        im = axs[1].imshow(explained_975, cmap=cmap_975, alpha=0.5, norm=norm_975)
         cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
         
-        axs[0].set_title("Mean contribution")
-        axs[1].set_title("Std contribution")
+        axs[0].set_title(f"{quantiles[0]} quantile")
+        axs[1].set_title(f"{quantiles[1]} quantile")
 
         axs[0].set_xticks([])
         axs[0].set_yticks([])
@@ -311,7 +313,7 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
         plt.show()
 
 def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, sample=False, median=True):
-    cont_class = pip_func.local_explain_relu_normal_dist(net, explain_this, sample=sample, median=median)
+    cont_class, _, _ = pip_func.local_explain_relu_normal_dist(net, explain_this, sample=sample, median=median)
     colors_mean = ["blue", "white", "red"]
     colors_std = ["blue", "white", "red"]
     cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
