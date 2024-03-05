@@ -114,12 +114,11 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
 
     preds_means = np.mean(preds,0)[0]
     for c in mean_contribution.keys():
-        preds_errors = np.diff(np.quantile(preds[:,:,c], quantiles))
+        preds_errors = np.quantile(preds[:,:,c], quantiles)
         variable_names_class = copy.deepcopy(variable_names)
         # labels = np.array([str(k) for k in mean_contribution[c].keys()])
         means = np.array(list(mean_contribution[c].values()))
-        errors = np.array(list(cred_contribution[c].values()))
-
+        errors = np.array(list(cred_contribution[c].values())) 
 
         if not include_bias:
             # labels = labels[:-1]
@@ -134,12 +133,14 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
             errors = errors[not_include]
 
         means = np.append(means, preds_means[c])
-        errors = np.append(errors, preds_errors)
+        errors = np.vstack([errors, preds_errors])
+        top = errors[:,1]-means
+        bottom = means-errors[:,0]
         variable_names_class = np.append(variable_names_class, "Prediction")
 
         fig, ax = plt.subplots()
         
-        ax.bar(variable_names_class, means, yerr=errors, align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names_class, means, yerr=(bottom, top), align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
         ax.set_xticks(variable_names_class)
         ax.tick_params(axis='x', rotation=90)
@@ -151,8 +152,8 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
         plt.show()
 
 
-def plot_local_contribution_dist(net, data, sample=False, median=True, save_path=None, class_names=None, variable_names=None):
-    cont_class = pip_func.local_explain_relu_normal_dist(net, data, sample=sample, median=median)
+def plot_local_contribution_dist(net, data, save_path=None, class_names=None, variable_names=None, quantiles=[0.025,0.975], include_zero_means=True):
+    cont_class, out, out_std = pip_func.local_explain_relu_normal_dist(net, data, quantiles=quantiles)
     n_classes = len(cont_class.keys())
     if class_names == None:
         class_names = np.arange(n_classes)
@@ -161,17 +162,30 @@ def plot_local_contribution_dist(net, data, sample=False, median=True, save_path
         variable_names = list(variable_names.astype(str))
     variable_names = np.array(variable_names)
     for c in cont_class.keys():
+        variable_names_class = copy.deepcopy(variable_names)
         # labels = np.array([str(k) for k in cont_class[c].keys()])
         means = np.array([val[0] for val in cont_class[c].values()])
-        errors = np.array([val[1] for val in cont_class[c].values()])*2
+        errors = np.array([val[1] for val in cont_class[c].values()])
 
-        not_include = means != 0
+        if not include_zero_means:
+            not_include = means != 0
+            variable_names_class = variable_names_class[not_include]
+            means = means[not_include]
+            errors = errors[not_include]
+
+        quantiles_pred = stats.norm.ppf(quantiles, out[c], out_std[c])
+        means = np.append(means,out[c])
+        errors = np.vstack([errors, quantiles_pred])
+        top = errors[:,1]-means
+        bottom = means-errors[:,0]
+
+        variable_names_class = np.append(variable_names_class, "Prediction")
 
         fig, ax = plt.subplots()
         
-        ax.bar(variable_names[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names_class, means, yerr=(bottom, top), align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(variable_names[not_include])
+        ax.set_xticks(variable_names_class)
         ax.tick_params(axis='x', rotation=90)
         ax.set_title(f'Distribution explaination of {class_names[c]}')
         ax.grid()

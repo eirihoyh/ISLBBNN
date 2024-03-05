@@ -651,6 +651,18 @@ def complexity_measure_multiclass(net,p,rand_numbs,classes):
     return mc_int_second, combined_complexity_class, combined_complexity, second
 
 
+def get_weight_and_bias_std(net, alphas_numpy, threshold=0.5):
+    '''
+    Have that std represents the weights and biases 
+    '''
+    std_weigth = weight_matrices_std_numpy(net)
+    bias_weights_std = std_matrices_bias_numpy(net)
+    for i in range(len(std_weigth)):
+        std_weigth[i] *= (alphas_numpy[i] > threshold)*1.
+
+    return std_weigth, bias_weights_std
+
+
 def get_weight_and_bias(net, alphas_numpy, median=True, sample=False, threshold=0.5):
     weights = weight_matrices_numpy(net)
     std_weigth = weight_matrices_std_numpy(net)
@@ -684,6 +696,21 @@ def relu_activation(input_data,weights, bias_weights):
         out = np.concatenate((out, input_data.detach().numpy()),1)
         out = out@w.T + bias_weights[i]
         out = out*(out>0) # ReLU activation
+        output_list.append(out)
+    
+    # No activation in last layer (prediction/output layer)
+    out = np.concatenate((out, input_data.detach().numpy()),1)
+    out = out@weights[-1].T + bias_weights[-1]
+    output_list.append(out)
+
+    return out, output_list
+
+def no_activation(input_data,weights, bias_weights):
+    output_list = []
+    out = np.array([[]])
+    for i, w in enumerate(weights[:-1]):
+        out = np.concatenate((out, input_data.detach().numpy()),1)
+        out = out@w.T + bias_weights[i]
         output_list.append(out)
     
     # No activation in last layer (prediction/output layer)
@@ -807,15 +834,15 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
             for s in range(n_samples):
                 values[s] = contributions[s][c][pi]
             mean_contribution[c][pi] = np.mean(values)
-            cred_contribution[c][pi] = np.diff(np.quantile(values, quantiles)) # diff CI, uses 95\% as standard
+            cred_contribution[c][pi] = np.quantile(values, quantiles) # diff CI, uses 95\% as standard
         bias_contr = np.array([contributions[s][c]["bias"] for s in range(n_samples)])
         mean_contribution[c]["bias"] = np.mean(bias_contr)
-        cred_contribution[c]["bias"] = np.diff(np.quantile(bias_contr, quantiles))
+        cred_contribution[c]["bias"] = np.quantile(bias_contr, quantiles)
 
     return mean_contribution, cred_contribution, np.array(preds)
 
 
-def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, sample=False, verbose=False):
+def local_explain_relu_normal_dist(net, input_data, threshold=0.5, verbose=False, quantiles=[0.025,0.975]):
     '''
     Gives local explainability in terms as a probability distribution
     for a given input when using a network initiated using ReLU 
@@ -837,7 +864,8 @@ def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, 
     alphas_numpy = get_alphas_numpy(net)
     nr_classes = alphas_numpy[-1].shape[0]
     
-    weights, bias_weights, alphas_numpy = get_weight_and_bias(net, alphas_numpy, median, sample, threshold) 
+    weights, bias_weights, alphas_numpy = get_weight_and_bias(net, alphas_numpy, median=True, sample=False, threshold=threshold) # mu
+    std_weights, std_bias_weights = get_weight_and_bias_std(net, alphas_numpy, threshold=threshold) # std
 
     # Get alpha matrices to torch to work for "clean_alpha_class" func
     alphas = copy.deepcopy(alphas_numpy)
@@ -845,6 +873,17 @@ def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, 
         alphas[i] = torch.tensor(alphas[i])
 
     out, output_list = relu_activation(input_data, weights, bias_weights)
+    
+    # Get std such that we can compute prediction certainty
+    clean_alpha_mat = clean_alpha(net, threshold=threshold)
+    dim, p = clean_alpha_mat[0].shape
+    active_nodes_list = get_active_nodes(clean_alpha_mat, output_list)
+    std_weights = find_active_weights(std_weights, active_nodes_list, clean_alpha_mat, dim)
+    var_weights = [std**2 for std in std_weights]
+    var_bais_weights = [std**2 for std in std_bias_weights]
+    out_var, _ = no_activation(input_data**2, var_weights, var_bais_weights)
+    out_std = np.sqrt(out_var)
+    
     
     if verbose: print(out) # "Predicted" values after sending data through network
 
@@ -887,12 +926,13 @@ def local_explain_relu_normal_dist(net, input_data, threshold=0.5, median=True, 
                 
                 x_var = np.concatenate((x_var, explain_this_numpy**2), 1)  # TODO: Check if I should rather have "explain_this_numpy**2"
                 x_var = x_var@avar.T
-
-            pred_impact[pi] = [x_mu[0,0], np.sqrt(x_var[0,0])]  # mean and std for Gaussian dist 
+            x_std = np.sqrt(x_var[0,0])
+            ci = stats.norm.ppf(quantiles, x_mu[0,0], x_std)
+            pred_impact[pi] = [x_mu[0,0], ci]  # mean and std for Gaussian dist 
     
         contribution_classes[c] = pred_impact
 
-    return contribution_classes
+    return contribution_classes, out[0], out_std[0]
 
 def train(net,train_data, optimizer, batch_size, num_batches, p, DEVICE, nr_weights, multiclass=False, verbose=True, post_train=False):
     net.train()
