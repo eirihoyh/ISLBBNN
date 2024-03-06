@@ -276,76 +276,34 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
     cmap_025 = mcolors.LinearSegmentedColormap.from_list("", colors_025)
     cmap_975 = mcolors.LinearSegmentedColormap.from_list("", colors_975)
     used_img = explain_this.reshape((p,p))
-    for c in range(n_classes):
-        explained_c = np.array(list(cred_contribution[c].values())[:-1])
-        explained_025 = explained_c[:,0].reshape((p,p))
-        explained_975 = explained_c[:,1].reshape((p,p))
-        
-        maxima_025 = explained_025.max()
-        minima_025 = explained_025.min()
-        maxima_975 = explained_975.max()
-        minima_975 = explained_975.min()
-
-        fig, axs = plt.subplots(1,2, figsize=(8,8))
-        
-        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        norm_025 = TwoSlopeNorm(vmin=minima_025-0.001, vcenter=0, vmax=maxima_025+0.001)
-        im = axs[0].imshow(explained_025, cmap=cmap_025, alpha=0.5, norm=norm_025)
-        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
-        cbar.ax.set_yscale('linear')
-
-        norm_975 = TwoSlopeNorm(vmin=minima_975-0.001, vcenter=0, vmax=maxima_975+0.001)
-        im = axs[1].imshow(explained_975, cmap=cmap_975, alpha=0.5, norm=norm_975)
-        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
-        cbar.ax.set_yscale('linear')
-        
-        axs[0].set_title(f"{quantiles[0]} quantile")
-        axs[1].set_title(f"{quantiles[1]} quantile")
-
-        axs[0].set_xticks([])
-        axs[0].set_yticks([])
-        axs[1].set_xticks([])
-        axs[1].set_yticks([])
-
-        fig.suptitle(f"Local explain class: {c}")
-        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
-        plt.show()
-
-def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, sample=False, median=True):
-    cont_class, _, _ = pip_func.local_explain_relu_normal_dist(net, explain_this, sample=sample, median=median)
-    colors_mean = ["blue", "white", "red"]
-    colors_std = ["blue", "white", "red"]
-    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
-    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
-    p = int(explain_this.shape[-1]**0.5)
-    used_img = explain_this.reshape((p,p))
     for i in range(n_classes):
-        alli = np.array(list(cont_class[i].values()))
-        mu = alli[:,0]
-        std = alli[:,1]
-        explained_025 = np.where(std > 0, stats.norm.ppf(0.025, mu, std), 0).reshape((p,p))
-        maxima_025 = explained_025.max()
-        minima_025 = explained_025.min()
+        explained_c = np.array(list(cred_contribution[i].values())[:-1])
+        
+        explained_025 = explained_c[:,0].reshape((p,p))
+        explained_025 = np.where(abs(explained_025)>0, explained_025, np.nan)
+        explained_975 = explained_c[:,1].reshape((p,p))
+        explained_975 = np.where(abs(explained_975)>0, explained_975, np.nan)
+        
+        maxima_025 = np.nanmax(explained_025)
+        minima_025 = np.nanmin(explained_025)
 
-        explained_975 = np.where(std > 0, stats.norm.ppf(0.975, mu, std), 0).reshape((p,p))
-        maxima_975 = explained_975.max()
-        minima_975 = explained_975.min()
+        maxima_975 = np.nanmax(explained_975)
+        minima_975 = np.nanmin(explained_975)
         fig, axs = plt.subplots(1,2, figsize=(8,8))
 
 
         maxima = np.max([maxima_025, maxima_975])
         minima = np.min([minima_025, minima_975])
                 
-        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
         norm_mean = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
-        im = axs[0].imshow(explained_025, cmap=cmap_mean, alpha=0.5, norm=norm_mean)
+        im = axs[0].imshow(explained_025, cmap=cmap_025, norm=norm_mean)
         cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
 
         norm_std = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
-        im = axs[1].imshow(explained_975, cmap=cmap_std, alpha=0.5, norm=norm_std)
+        im = axs[1].imshow(explained_975, cmap=cmap_975, norm=norm_std)
         cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
         
@@ -356,9 +314,53 @@ def plot_local_contribution_images_contribution_dist(net, explain_this, n_classe
         axs[0].set_yticks([])
         axs[1].set_xticks([])
         axs[1].set_yticks([])
-        # Set colorbar ticks and labels
-        # cbar.set_ticks([-1, 0, 1])  # Set ticks at -1, 0, and 1
-        # cbar.set_ticklabels(['Low', 'Medium', 'High'])  # Set tick labels
+        fig.suptitle(f"Local explain class: {i}")
+        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
+        plt.show()
+
+def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1):
+    cont_class, _, _ = pip_func.local_explain_relu_normal_dist(net, explain_this)
+    colors_mean = ["blue", "white", "red"]
+    colors_std = ["blue", "white", "red"]
+    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
+    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
+    p = int(explain_this.shape[-1]**0.5)
+    used_img = explain_this.reshape((p,p))
+    for i in range(n_classes):
+        errors = np.array([val[1] for val in cont_class[i].values()])
+        explained_025 = errors[:,0].reshape((p,p))
+        explained_975 = errors[:,1].reshape((p,p))
+
+        maxima_025 = np.nanmax(explained_025)
+        minima_025 = np.nanmin(explained_025)
+
+        maxima_975 = np.nanmax(explained_975)
+        minima_975 = np.nanmin(explained_975)
+        fig, axs = plt.subplots(1,2, figsize=(8,8))
+
+
+        maxima = np.max([maxima_025, maxima_975])
+        minima = np.min([minima_025, minima_975])
+                
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        norm_mean = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[0].imshow(explained_025, cmap=cmap_mean, norm=norm_mean)
+        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+
+        norm_std = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[1].imshow(explained_975, cmap=cmap_std, norm=norm_std)
+        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+        
+        axs[0].set_title("0.025 quantile")
+        axs[1].set_title("0.975 quantile")
+
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        axs[1].set_xticks([])
+        axs[1].set_yticks([])
         fig.suptitle(f"Local explain class: {i}")
         plt.tight_layout(rect=[0, 0.03, 1, 1.3])
         plt.show()
