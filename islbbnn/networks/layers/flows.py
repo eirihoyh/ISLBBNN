@@ -129,7 +129,6 @@ class MADE(nn.Module):
                 MaskedLinear(h0, h1),
                 # nn.LeakyReLU(0.001), 
                 nn.Sigmoid(),
-                # nn.ReLU(),
                 # nn.Tanh(),
                 # nn.SiLU(),
             ])

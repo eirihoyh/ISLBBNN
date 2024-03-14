@@ -97,13 +97,13 @@ def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_i
     plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
 
 
-def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None):
+def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None, quantiles=[0.025,0.975], include_zero_means=True):
     '''
     Empirical local explaination model. This should be used for tabular data as 
     images usually has too many variables to get a good plot
     '''
     variable_names = copy.deepcopy(variable_names)
-    mean_contribution, std_contribution = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples)
+    mean_contribution, cred_contribution, preds = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
     if class_names == None:
         class_names = np.arange(n_classes)
     if variable_names == None:
@@ -111,25 +111,38 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
         variable_names = list(variable_names.astype(str))
     variable_names.append("bias")
     variable_names = np.array(variable_names)
+
+    preds_means = np.mean(preds,0)[0]
     for c in mean_contribution.keys():
+        preds_errors = np.quantile(preds[:,:,c], quantiles)
+        variable_names_class = copy.deepcopy(variable_names)
         # labels = np.array([str(k) for k in mean_contribution[c].keys()])
         means = np.array(list(mean_contribution[c].values()))
-        errors = np.array(list(std_contribution[c].values()))*2  # Times 2 to get a more accurate interval
-
+        errors = np.array(list(cred_contribution[c].values())) 
 
         if not include_bias:
             # labels = labels[:-1]
             means = means[:-1]
             errors = errors[:-1]
-            variable_names = variable_names[:-1]
+            variable_names_class = variable_names_class[:-1]
         
-        not_include = means != 0
+        if not include_zero_means:
+            not_include = means != 0
+            variable_names_class = variable_names_class[not_include]
+            means = means[not_include]
+            errors = errors[not_include]
+
+        means = np.append(means, preds_means[c])
+        errors = np.vstack([errors, preds_errors])
+        top = errors[:,1]-means
+        bottom = means-errors[:,0]
+        variable_names_class = np.append(variable_names_class, "Prediction")
 
         fig, ax = plt.subplots()
         
-        ax.bar(variable_names[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names_class, means, yerr=(bottom, top), align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(variable_names[not_include])
+        ax.set_xticks(variable_names_class)
         ax.tick_params(axis='x', rotation=90)
         ax.set_title(f'Empirical explaination of {class_names[c]}')
         ax.grid()
@@ -139,8 +152,8 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
         plt.show()
 
 
-def plot_local_contribution_dist(net, data, sample=False, median=True, save_path=None, class_names=None, variable_names=None):
-    cont_class = pip_func.local_explain_relu_normal_dist(net, data, sample=sample, median=median)
+def plot_local_contribution_dist(net, data, save_path=None, class_names=None, variable_names=None, quantiles=[0.025,0.975], include_zero_means=True):
+    cont_class, out, out_std = pip_func.local_explain_relu_normal_dist(net, data, quantiles=quantiles)
     n_classes = len(cont_class.keys())
     if class_names == None:
         class_names = np.arange(n_classes)
@@ -149,17 +162,30 @@ def plot_local_contribution_dist(net, data, sample=False, median=True, save_path
         variable_names = list(variable_names.astype(str))
     variable_names = np.array(variable_names)
     for c in cont_class.keys():
+        variable_names_class = copy.deepcopy(variable_names)
         # labels = np.array([str(k) for k in cont_class[c].keys()])
         means = np.array([val[0] for val in cont_class[c].values()])
-        errors = np.array([val[1] for val in cont_class[c].values()])*2
+        errors = np.array([val[1] for val in cont_class[c].values()])
 
-        not_include = means != 0
+        if not include_zero_means:
+            not_include = means != 0
+            variable_names_class = variable_names_class[not_include]
+            means = means[not_include]
+            errors = errors[not_include]
+
+        quantiles_pred = stats.norm.ppf(quantiles, out[c], out_std[c])
+        means = np.append(means,out[c])
+        errors = np.vstack([errors, quantiles_pred])
+        top = errors[:,1]-means
+        bottom = means-errors[:,0]
+
+        variable_names_class = np.append(variable_names_class, "Prediction")
 
         fig, ax = plt.subplots()
         
-        ax.bar(variable_names[not_include], means[not_include], yerr=errors[not_include], align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.bar(variable_names_class, means, yerr=(bottom, top), align='center', alpha=0.5, ecolor='black', capsize=10)
         ax.set_ylabel('Contribution')
-        ax.set_xticks(variable_names[not_include])
+        ax.set_xticks(variable_names_class)
         ax.tick_params(axis='x', rotation=90)
         ax.set_title(f'Distribution explaination of {class_names[c]}')
         ax.grid()
@@ -237,87 +263,47 @@ def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, thresh
         plt.savefig(save_path)
     plt.show()
 
-def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, sample=True, median=True, n_samples=100):
+def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975]):
     '''
     NOTE: Only works for ReLU based networks 
     '''
-    mean_contribution, std_contribution = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples)
+    _, cred_contribution, _ = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
 
     p = int(explain_this.shape[-1]**0.5)
 
-    colors_mean = ["blue", "white", "red"]
-    colors_std = ["blue", "white", "red"]
-    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
-    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
-    used_img = explain_this.reshape((p,p))
-    for c in range(n_classes):
-        explained_mean = np.array(list(mean_contribution[c].values())[:-1]).reshape((p,p))
-        maxima_mean = explained_mean.max()
-        minima_mean = explained_mean.min()
-
-        explained_std = np.array(list(std_contribution[c].values())[:-1]).reshape((p,p))
-        maxima_std = explained_std.max()
-        minima_std = explained_std.min()
-        fig, axs = plt.subplots(1,2, figsize=(8,8))
-        
-        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        norm_mean = TwoSlopeNorm(vmin=minima_mean-0.001, vcenter=0, vmax=maxima_mean+0.001)
-        im = axs[0].imshow(explained_mean, cmap=cmap_mean, alpha=0.5, norm=norm_mean)
-        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
-        cbar.ax.set_yscale('linear')
-
-        norm_std = TwoSlopeNorm(vmin=minima_std-0.001, vcenter=0, vmax=maxima_std+0.001)
-        im = axs[1].imshow(explained_std, cmap=cmap_std, alpha=0.5, norm=norm_std)
-        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
-        cbar.ax.set_yscale('linear')
-        
-        axs[0].set_title("Mean contribution")
-        axs[1].set_title("Std contribution")
-
-        axs[0].set_xticks([])
-        axs[0].set_yticks([])
-        axs[1].set_xticks([])
-        axs[1].set_yticks([])
-
-        fig.suptitle(f"Local explain class: {c}")
-        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
-        plt.show()
-
-def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, sample=False, median=True):
-    cont_class = pip_func.local_explain_relu_normal_dist(net, explain_this, sample=sample, median=median)
-    colors_mean = ["blue", "white", "red"]
-    colors_std = ["blue", "white", "red"]
-    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
-    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
-    p = int(explain_this.shape[-1]**0.5)
+    colors_025 = ["blue", "white", "red"]
+    colors_975 = ["blue", "white", "red"]
+    cmap_025 = mcolors.LinearSegmentedColormap.from_list("", colors_025)
+    cmap_975 = mcolors.LinearSegmentedColormap.from_list("", colors_975)
     used_img = explain_this.reshape((p,p))
     for i in range(n_classes):
-        alli = np.array(list(cont_class[i].values()))
-        mu = alli[:,0]
-        std = alli[:,1]
-        explained_025 = np.where(std > 0, stats.norm.ppf(0.025, mu, std), 0).reshape((p,p))
-        maxima_025 = explained_025.max()
-        minima_025 = explained_025.min()
+        explained_c = np.array(list(cred_contribution[i].values())[:-1])
+        
+        explained_025 = explained_c[:,0].reshape((p,p))
+        explained_025 = np.where(abs(explained_025)>0, explained_025, np.nan)
+        explained_975 = explained_c[:,1].reshape((p,p))
+        explained_975 = np.where(abs(explained_975)>0, explained_975, np.nan)
+        
+        maxima_025 = np.nanmax(explained_025)
+        minima_025 = np.nanmin(explained_025)
 
-        explained_975 = np.where(std > 0, stats.norm.ppf(0.975, mu, std), 0).reshape((p,p))
-        maxima_975 = explained_975.max()
-        minima_975 = explained_975.min()
+        maxima_975 = np.nanmax(explained_975)
+        minima_975 = np.nanmin(explained_975)
         fig, axs = plt.subplots(1,2, figsize=(8,8))
 
 
         maxima = np.max([maxima_025, maxima_975])
         minima = np.min([minima_025, minima_975])
                 
-        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
-        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img))
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
         norm_mean = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
-        im = axs[0].imshow(explained_025, cmap=cmap_mean, alpha=0.5, norm=norm_mean)
+        im = axs[0].imshow(explained_025, cmap=cmap_025, norm=norm_mean)
         cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
 
         norm_std = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
-        im = axs[1].imshow(explained_975, cmap=cmap_std, alpha=0.5, norm=norm_std)
+        im = axs[1].imshow(explained_975, cmap=cmap_975, norm=norm_std)
         cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
         
@@ -328,9 +314,53 @@ def plot_local_contribution_images_contribution_dist(net, explain_this, n_classe
         axs[0].set_yticks([])
         axs[1].set_xticks([])
         axs[1].set_yticks([])
-        # Set colorbar ticks and labels
-        # cbar.set_ticks([-1, 0, 1])  # Set ticks at -1, 0, and 1
-        # cbar.set_ticklabels(['Low', 'Medium', 'High'])  # Set tick labels
+        fig.suptitle(f"Local explain class: {i}")
+        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
+        plt.show()
+
+def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1):
+    cont_class, _, _ = pip_func.local_explain_relu_normal_dist(net, explain_this)
+    colors_mean = ["blue", "white", "red"]
+    colors_std = ["blue", "white", "red"]
+    cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
+    cmap_std = mcolors.LinearSegmentedColormap.from_list("", colors_std)
+    p = int(explain_this.shape[-1]**0.5)
+    used_img = explain_this.reshape((p,p))
+    for i in range(n_classes):
+        errors = np.array([val[1] for val in cont_class[i].values()])
+        explained_025 = errors[:,0].reshape((p,p))
+        explained_975 = errors[:,1].reshape((p,p))
+
+        maxima_025 = np.nanmax(explained_025)
+        minima_025 = np.nanmin(explained_025)
+
+        maxima_975 = np.nanmax(explained_975)
+        minima_975 = np.nanmin(explained_975)
+        fig, axs = plt.subplots(1,2, figsize=(8,8))
+
+
+        maxima = np.max([maxima_025, maxima_975])
+        minima = np.min([minima_025, minima_975])
+                
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        norm_mean = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[0].imshow(explained_025, cmap=cmap_mean, norm=norm_mean)
+        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+
+        norm_std = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[1].imshow(explained_975, cmap=cmap_std, norm=norm_std)
+        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+        
+        axs[0].set_title("0.025 quantile")
+        axs[1].set_title("0.975 quantile")
+
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        axs[1].set_xticks([])
+        axs[1].set_yticks([])
         fig.suptitle(f"Local explain class: {i}")
         plt.tight_layout(rect=[0, 0.03, 1, 1.3])
         plt.show()
