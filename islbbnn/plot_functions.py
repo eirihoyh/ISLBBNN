@@ -263,13 +263,16 @@ def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, thresh
         plt.savefig(save_path)
     plt.show()
 
-def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975]):
+def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, class_names=None, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975]):
     '''
     NOTE: Only works for ReLU based networks 
     '''
     _, cred_contribution, _ = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
 
     p = int(explain_this.shape[-1]**0.5)
+
+    if class_names == None:
+        class_names = np.arange(n_classes)
 
     colors_025 = ["blue", "white", "red"]
     colors_975 = ["blue", "white", "red"]
@@ -314,12 +317,16 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
         axs[0].set_yticks([])
         axs[1].set_xticks([])
         axs[1].set_yticks([])
-        fig.suptitle(f"Local explain class: {i}")
+        fig.suptitle(f"Local explain class: {class_names[i]}")
         plt.tight_layout(rect=[0, 0.03, 1, 1.3])
         plt.show()
 
-def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1):
+def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, class_names=None):
     cont_class, _, _ = pip_func.local_explain_relu_normal_dist(net, explain_this)
+    
+    if class_names == None:
+        class_names = np.arange(n_classes)
+
     colors_mean = ["blue", "white", "red"]
     colors_std = ["blue", "white", "red"]
     cmap_mean = mcolors.LinearSegmentedColormap.from_list("", colors_mean)
@@ -361,7 +368,7 @@ def plot_local_contribution_images_contribution_dist(net, explain_this, n_classe
         axs[0].set_yticks([])
         axs[1].set_xticks([])
         axs[1].set_yticks([])
-        fig.suptitle(f"Local explain class: {i}")
+        fig.suptitle(f"Local explain class: {class_names[i]}")
         plt.tight_layout(rect=[0, 0.03, 1, 1.3])
         plt.show()
 

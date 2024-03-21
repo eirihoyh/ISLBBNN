@@ -738,10 +738,10 @@ def find_active_weights(weights, active_nodes_list, clean_alpha_list, dim):
     for i in range(length-1): # From-->to principal; remove all incomming weights that are not connected to an active weight
         active_weights[i] = active_weights[i]*clean_alpha_list[i].detach().numpy() # Make sure that redundant connections is removed.
         active_weights[i] = np.array([active_weights[i][j,:]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]) # Make sure that only weights going into active nodes are used
-        if i+1 < length-1:
-            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,:dim][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))])  # Remove weights going out of an inactive node
+        if i+1 < length-1 and sum(active_nodes_list[i])>1:
+            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))])  # Remove weights going out of an inactive node
         else:
-            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,:dim][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]).T  # last layer need to transposed (for some reason)
+            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]).T  # layer with one node need transpose
         # active_weights[i+1][:,dim:] = clean_alpha_list[i+1][:, dim:].detach().numpy()*active_weights[i+1][:,dim:]
         # active_weights[i][:,dim:] = active_weights[i][:,dim:]*clean_alpha_list[i][:,dim:].detach().numpy() # Make sure that the correct input-skips are included
         # Need the above line because we could have weights that goes to an active node, but is actually
@@ -816,7 +816,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
                 x = np.array([[]])
                 for aw in active_weights:
                     x = np.concatenate((x, explain_this_numpy), 1)
-                    x = x@aw.T
+                    x = x@aw.T                   
 
                 pred_impact[pi] = x[0,0]
         
