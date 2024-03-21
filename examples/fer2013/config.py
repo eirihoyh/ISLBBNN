@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 config = {}
-config['num_epochs' ] = 1000  
+config['num_epochs' ] = 1500  
 config['post_train_epochs'] = 200
 config['n_nets'] = 1  # Number of different networks to run for one problem
 config['class_problem'] = True  # If classification problem or not
