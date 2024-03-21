@@ -741,7 +741,7 @@ def find_active_weights(weights, active_nodes_list, clean_alpha_list, dim):
         if i+1 < length-1 and sum(active_nodes_list[i])>1:
             active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))])  # Remove weights going out of an inactive node
         else:
-            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]).T  # last layer need to transposed (for some reason)
+            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]).T  # layer with one node need transpose
         # active_weights[i+1][:,dim:] = clean_alpha_list[i+1][:, dim:].detach().numpy()*active_weights[i+1][:,dim:]
         # active_weights[i][:,dim:] = active_weights[i][:,dim:]*clean_alpha_list[i][:,dim:].detach().numpy() # Make sure that the correct input-skips are included
         # Need the above line because we could have weights that goes to an active node, but is actually
