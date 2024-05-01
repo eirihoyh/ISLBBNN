@@ -528,14 +528,14 @@ def average_path_length(clean_alpha_list):
             sum_dists = np.concatenate((sum_dists, path_length))
     
     # Check if hidden node have expanded
-    for i in range(1, length_list,1):
-        curr_alpha = clean_alpha_list[i]
-        for dimi in range(curr_alpha.shape[1]-p):
-            incoming_weights = np.sum(clean_alpha_list[i-1][dimi,:].detach().numpy())
-            extra_weights = np.sum(curr_alpha[:,dimi].detach().numpy()) - 1
-            path_length = np.array([1]*extra_weights*incoming_weights)*(length_list-i+1) 
-            path_length = path_length[path_length>0]
-            sum_dists = np.append(sum_dists, path_length)
+    #for i in range(1, length_list,1):
+    #    curr_alpha = clean_alpha_list[i]
+    #    for dimi in range(curr_alpha.shape[1]-p):
+    #        incoming_weights = np.sum(clean_alpha_list[i-1][dimi,:].detach().numpy())
+    #        extra_weights = np.sum(curr_alpha[:,dimi].detach().numpy()) - 1
+    #        path_length = np.array([1]*extra_weights*incoming_weights)*(length_list-i+1) 
+    #        path_length = path_length[path_length>0]
+    #        sum_dists = np.append(sum_dists, path_length)
 
 
     return np.mean(sum_dists), sum_dists

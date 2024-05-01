@@ -263,13 +263,22 @@ def plot_model_vision_image(net, train_data, train_target, c=0, net_nr=0, thresh
         plt.savefig(save_path)
     plt.show()
 
-def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, class_names=None, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975]):
+def plot_local_contribution_images_contribution_empirical(net, explain_this, n_classes=1, class_names=None, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975], save_path=None):
     '''
     NOTE: Only works for ReLU based networks 
     '''
     _, cred_contribution, _ = pip_func.local_explain_relu(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
 
     p = int(explain_this.shape[-1]**0.5)
+
+    # make cred interval for pred based on n_samples (NOTE: softmax function)
+    all_preds = []
+    for _ in range(10_000):
+        net.eval()
+        preds = net.forward(explain_this, sample=True, ensemble=False).detach().cpu().numpy()[0]
+        all_preds.append(np.exp(preds)/sum(np.exp(preds)))
+
+    lower, upper = np.quantile(all_preds,[0.025,0.975], 0)
 
     if class_names == None:
         class_names = np.arange(n_classes)
@@ -295,8 +304,8 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
         fig, axs = plt.subplots(1,2, figsize=(8,8))
 
 
-        maxima = np.max([maxima_025, maxima_975])
-        minima = np.min([minima_025, minima_975])
+        maxima = np.max([maxima_025, maxima_975,0])
+        minima = np.min([minima_025, minima_975,0])
                 
         axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
         axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
@@ -310,15 +319,17 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
         cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
         cbar.ax.set_yscale('linear')
         
-        axs[0].set_title("0.025 quantile")
-        axs[1].set_title("0.975 quantile")
+        axs[0].set_title(f"0.025 quantile")
+        axs[1].set_title(f"0.975 quantile")
 
         axs[0].set_xticks([])
         axs[0].set_yticks([])
         axs[1].set_xticks([])
         axs[1].set_yticks([])
-        fig.suptitle(f"Local explain class: {class_names[i]}")
+        fig.suptitle(f"Local explain class: {class_names[i]}. Credibility interval: [{lower[i]:.4f}, {upper[i]:.4f}]")
         plt.tight_layout(rect=[0, 0.03, 1, 1.3])
+        if save_path != None:
+            plt.savefig(f"{save_path}/{class_names[i]}.png", bbox_inches='tight')
         plt.show()
 
 def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, class_names=None):
