@@ -3,7 +3,7 @@
 
 config = {}
 config['num_epochs' ] = 1500  
-config['post_train_epochs'] = 200
+config['post_train_epochs'] = 0
 config['n_nets'] = 1  # Number of different networks to run for one problem
 config['class_problem'] = True  # If classification problem or not
 config['n_layers'] = 1+2 # Four hidden + (one input+one output)
