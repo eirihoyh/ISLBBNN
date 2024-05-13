@@ -1,0 +1,28 @@
+strict digraph "All paths!" {
+	I_4
+	H2_54
+	I_4 -> H2_54 [label="α=1.00"]
+	I_6
+	I_6 -> H2_54 [label="α=1.00"]
+	I_7
+	I_7 -> H2_54 [label="α=1.00"]
+	H2_96
+	I_6 -> H2_96 [label="α=1.00"]
+	H2_148
+	I_4 -> H2_148 [label="α=1.00"]
+	I_7 -> H2_148 [label="α=0.97"]
+	H2_199
+	I_6 -> H2_199 [label="α=0.98"]
+	Output_0
+	H2_54 -> Output_0 [label="α=1.00"]
+	H2_96 -> Output_0 [label="α=1.00"]
+	H2_148 -> Output_0 [label="α=1.00"]
+	H2_199 -> Output_0 [label="α=1.00"]
+	I_2
+	I_2 -> Output_0 [label="α=1.00"]
+	I_3
+	I_3 -> Output_0 [label="α=1.00"]
+	I_4 -> Output_0 [label="α=1.00"]
+	I_6 -> Output_0 [label="α=1.00"]
+	"All paths" [shape=Msquare]
+}

@@ -1,0 +1,168 @@
+strict digraph "All paths!" {
+	I_311
+	Output_0
+	I_311 -> Output_0 [label="α=1.00"]
+	I_359
+	I_359 -> Output_0 [label="α=1.00"]
+	I_608
+	I_608 -> Output_0 [label="α=1.00"]
+	I_642
+	I_642 -> Output_0 [label="α=1.00"]
+	I_650
+	I_650 -> Output_0 [label="α=1.00"]
+	I_844
+	I_844 -> Output_0 [label="α=1.00"]
+	I_984
+	I_984 -> Output_0 [label="α=1.00"]
+	I_1069
+	I_1069 -> Output_0 [label="α=1.00"]
+	I_1141
+	I_1141 -> Output_0 [label="α=1.00"]
+	I_1180
+	I_1180 -> Output_0 [label="α=1.00"]
+	I_1218
+	I_1218 -> Output_0 [label="α=1.00"]
+	I_1263
+	I_1263 -> Output_0 [label="α=1.00"]
+	I_1312
+	I_1312 -> Output_0 [label="α=1.00"]
+	I_1333
+	I_1333 -> Output_0 [label="α=1.00"]
+	I_1360
+	I_1360 -> Output_0 [label="α=1.00"]
+	I_1375
+	I_1375 -> Output_0 [label="α=1.00"]
+	I_1403
+	I_1403 -> Output_0 [label="α=1.00"]
+	I_1520
+	I_1520 -> Output_0 [label="α=1.00"]
+	I_1522
+	I_1522 -> Output_0 [label="α=1.00"]
+	I_1595
+	I_1595 -> Output_0 [label="α=1.00"]
+	I_1619
+	I_1619 -> Output_0 [label="α=1.00"]
+	I_1664
+	I_1664 -> Output_0 [label="α=1.00"]
+	I_1753
+	I_1753 -> Output_0 [label="α=1.00"]
+	I_1847
+	I_1847 -> Output_0 [label="α=1.00"]
+	I_1851
+	I_1851 -> Output_0 [label="α=1.00"]
+	I_1905
+	I_1905 -> Output_0 [label="α=1.00"]
+	I_1945
+	I_1945 -> Output_0 [label="α=1.00"]
+	I_1991
+	I_1991 -> Output_0 [label="α=1.00"]
+	I_2082
+	I_2082 -> Output_0 [label="α=1.00"]
+	I_2084
+	I_2084 -> Output_0 [label="α=1.00"]
+	I_2096
+	I_2096 -> Output_0 [label="α=1.00"]
+	I_2232
+	I_2232 -> Output_0 [label="α=1.00"]
+	I_26
+	Output_1
+	I_26 -> Output_1 [label="α=1.00"]
+	I_222
+	I_222 -> Output_1 [label="α=1.00"]
+	I_368
+	I_368 -> Output_1 [label="α=1.00"]
+	I_528
+	I_528 -> Output_1 [label="α=1.00"]
+	I_541
+	I_541 -> Output_1 [label="α=1.00"]
+	I_730
+	I_730 -> Output_1 [label="α=1.00"]
+	I_1070
+	I_1070 -> Output_1 [label="α=1.00"]
+	I_1231
+	I_1231 -> Output_1 [label="α=1.00"]
+	I_1232
+	I_1232 -> Output_1 [label="α=1.00"]
+	I_1455
+	I_1455 -> Output_1 [label="α=1.00"]
+	I_1456
+	I_1456 -> Output_1 [label="α=1.00"]
+	I_1560
+	I_1560 -> Output_1 [label="α=1.00"]
+	I_1598
+	I_1598 -> Output_1 [label="α=1.00"]
+	I_1695
+	I_1695 -> Output_1 [label="α=1.00"]
+	I_1792
+	I_1792 -> Output_1 [label="α=1.00"]
+	I_1799
+	I_1799 -> Output_1 [label="α=1.00"]
+	I_1855
+	I_1855 -> Output_1 [label="α=1.00"]
+	I_1906
+	I_1906 -> Output_1 [label="α=1.00"]
+	I_1940
+	I_1940 -> Output_1 [label="α=1.00"]
+	I_2044
+	I_2044 -> Output_1 [label="α=1.00"]
+	I_2083
+	I_2083 -> Output_1 [label="α=1.00"]
+	I_2285
+	I_2285 -> Output_1 [label="α=1.00"]
+	I_211
+	Output_2
+	I_211 -> Output_2 [label="α=1.00"]
+	I_316
+	I_316 -> Output_2 [label="α=1.00"]
+	I_364
+	I_364 -> Output_2 [label="α=1.00"]
+	I_746
+	I_746 -> Output_2 [label="α=1.00"]
+	I_788
+	I_788 -> Output_2 [label="α=1.00"]
+	I_984 -> Output_2 [label="α=1.00"]
+	I_1021
+	I_1021 -> Output_2 [label="α=1.00"]
+	I_1022
+	I_1022 -> Output_2 [label="α=1.00"]
+	I_1070 -> Output_2 [label="α=1.00"]
+	I_1077
+	I_1077 -> Output_2 [label="α=1.00"]
+	I_1172
+	I_1172 -> Output_2 [label="α=1.00"]
+	I_1212
+	I_1212 -> Output_2 [label="α=1.00"]
+	I_1267
+	I_1267 -> Output_2 [label="α=1.00"]
+	I_1272
+	I_1272 -> Output_2 [label="α=1.00"]
+	I_1283
+	I_1283 -> Output_2 [label="α=1.00"]
+	I_1310
+	I_1310 -> Output_2 [label="α=1.00"]
+	I_1360 -> Output_2 [label="α=1.00"]
+	I_1408
+	I_1408 -> Output_2 [label="α=1.00"]
+	I_1455 -> Output_2 [label="α=1.00"]
+	I_1551
+	I_1551 -> Output_2 [label="α=1.00"]
+	I_1568
+	I_1568 -> Output_2 [label="α=1.00"]
+	I_1597
+	I_1597 -> Output_2 [label="α=1.00"]
+	I_1649
+	I_1649 -> Output_2 [label="α=1.00"]
+	I_1693
+	I_1693 -> Output_2 [label="α=1.00"]
+	I_1851 -> Output_2 [label="α=1.00"]
+	I_1886
+	I_1886 -> Output_2 [label="α=1.00"]
+	I_1945 -> Output_2 [label="α=1.00"]
+	I_2036
+	I_2036 -> Output_2 [label="α=1.00"]
+	I_2082 -> Output_2 [label="α=1.00"]
+	I_2232 -> Output_2 [label="α=1.00"]
+	I_2278
+	I_2278 -> Output_2 [label="α=1.00"]
+	"All paths" [shape=Msquare]
+}
