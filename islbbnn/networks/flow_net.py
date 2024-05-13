@@ -54,6 +54,29 @@ class BayesianNetwork(nn.Module):
             out = self.linears[i](torch.cat((x, x_input),1), ensemble, post_train)
         return out
 
+    def forward_preact(self, x, sample=False, ensemble=False, calculate_log_probs=False, post_train=False):
+        '''
+        x: 
+            Input data
+        ensemble:
+            If True, then we will use the full model. If False, we will use the median prob model
+        post_train:
+            Train using the median probability model
+        
+        TODO: sample and calculate_log_probs are not used in flow_layers, but are used in lrt_layers
+              Therefore, we should find a way s.t. we do not need to give things that are not used
+              in order to use the networks. That is, make more general...
+        '''
+        x_input = x.view(-1, self.p)
+        x = self.act(self.linears[0](x_input, ensemble, post_train))
+        i = 1
+        for l in self.linears[1:-1]:
+            x = self.act(l(torch.cat((x, x_input),1), ensemble, post_train))
+            i += 1
+
+        out = self.linears[i](torch.cat((x, x_input),1), ensemble, post_train)
+        return out
+
     def kl(self):
         kl_sum = self.linears[0].kl_div()
         for l in self.linears[1:]:

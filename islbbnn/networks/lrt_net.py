@@ -53,6 +53,29 @@ class BayesianNetwork(nn.Module):
         else:
             out = self.linears[i](torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train)
         return out
+    
+    def forward_preact(self, x, sample=False, ensemble=False, calculate_log_probs=False, post_train=False):
+        '''
+        x: 
+            Input data
+        sample:
+            Draw weights from their respective probability distributions
+        ensemble:
+            If True, then we will use the full model. If False, we will use the median prob model
+        calculate_log_probs:
+            If the KL-divergence should be computed. Always computed when .train() is used
+        post_train:
+            Train using the median probability model
+        '''
+        x_input = x.view(-1, self.p)
+        x = self.act(self.linears[0](x_input, ensemble, sample, calculate_log_probs, post_train))
+        i = 1
+        for l in self.linears[1:-1]:
+            x = self.act(l(torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train))
+            i += 1
+
+        out = self.linears[i](torch.cat((x, x_input),1), ensemble, sample, calculate_log_probs, post_train)
+        return out
 
     def kl(self):
         kl_sum = self.linears[0].kl
