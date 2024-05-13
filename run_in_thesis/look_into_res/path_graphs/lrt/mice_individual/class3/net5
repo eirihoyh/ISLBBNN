@@ -1,0 +1,54 @@
+strict digraph "All paths!" {
+	I_7
+	H4_15
+	I_7 -> H4_15 [label="α=1.00"]
+	I_9
+	I_9 -> H4_15 [label="α=1.00"]
+	I_19
+	I_19 -> H4_15 [label="α=1.00"]
+	I_24
+	I_24 -> H4_15 [label="α=1.00"]
+	I_32
+	I_32 -> H4_15 [label="α=1.00"]
+	I_49
+	I_49 -> H4_15 [label="α=1.00"]
+	I_76
+	I_76 -> H4_15 [label="α=1.00"]
+	I_1
+	H4_35
+	I_1 -> H4_35 [label="α=1.00"]
+	I_10
+	I_10 -> H4_35 [label="α=1.00"]
+	I_24 -> H4_35 [label="α=1.00"]
+	I_49 -> H4_35 [label="α=1.00"]
+	I_76 -> H4_35 [label="α=1.00"]
+	H4_37
+	I_7 -> H4_37 [label="α=1.00"]
+	I_31
+	I_31 -> H4_37 [label="α=1.00"]
+	I_46
+	I_46 -> H4_37 [label="α=1.00"]
+	I_63
+	I_63 -> H4_37 [label="α=1.00"]
+	Output_3
+	H4_15 -> Output_3 [label="α=1.00"]
+	H4_35 -> Output_3 [label="α=1.00"]
+	H4_37 -> Output_3 [label="α=1.00"]
+	I_3
+	I_3 -> Output_3 [label="α=1.00"]
+	I_16
+	I_16 -> Output_3 [label="α=1.00"]
+	I_23
+	I_23 -> Output_3 [label="α=1.00"]
+	I_39
+	I_39 -> Output_3 [label="α=1.00"]
+	I_62
+	I_62 -> Output_3 [label="α=1.00"]
+	I_63 -> Output_3 [label="α=1.00"]
+	I_65
+	I_65 -> Output_3 [label="α=1.00"]
+	I_72
+	I_72 -> Output_3 [label="α=1.00"]
+	I_76 -> Output_3 [label="α=1.00"]
+	"All paths" [shape=Msquare]
+}
