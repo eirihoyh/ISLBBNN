@@ -696,11 +696,13 @@ def relu_activation(input_data,weights, bias_weights):
         out = np.concatenate((out, input_data.detach().numpy()),1)
         out = out@w.T + bias_weights[i]
         out = out*(out>0) # ReLU activation
+        # print(out)
         output_list.append(out)
     
     # No activation in last layer (prediction/output layer)
     out = np.concatenate((out, input_data.detach().numpy()),1)
     out = out@weights[-1].T + bias_weights[-1]
+    # print(out)
     output_list.append(out)
 
     return out, output_list
@@ -735,21 +737,12 @@ def find_active_weights(weights, active_nodes_list, clean_alpha_list, dim):
     active_weights = copy.deepcopy(weights) # Weigths used in the local active nodes
     length = len(active_weights)
     # active_weights[-1] = active_weights[-1][c:c+1,:]
-    for i in range(length-1): # From-->to principal; remove all incomming weights that are not connected to an active weight
+    for i in range(length-1): 
         active_weights[i] = active_weights[i]*clean_alpha_list[i].detach().numpy() # Make sure that redundant connections is removed.
         active_weights[i] = np.array([active_weights[i][j,:]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]) # Make sure that only weights going into active nodes are used
-        if i+1 < length-1 and sum(active_nodes_list[i])>1:
-            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))])  # Remove weights going out of an inactive node
-        else:
-            active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]).T  # layer with one node need transpose
-        # active_weights[i+1][:,dim:] = clean_alpha_list[i+1][:, dim:].detach().numpy()*active_weights[i+1][:,dim:]
-        # active_weights[i][:,dim:] = active_weights[i][:,dim:]*clean_alpha_list[i][:,dim:].detach().numpy() # Make sure that the correct input-skips are included
-        # Need the above line because we could have weights that goes to an active node, but is actually
-        # not included in the model when predicting (alpha too low for that way in some way)
+        active_weights[i+1][:,:dim] = np.array([active_weights[i+1][:,j]*active_nodes_list[i,j] for j in range(len(active_nodes_list[i]))]).T  # Remove weights going out of an inactive node
+
     active_weights[-1] = active_weights[-1]*clean_alpha_list[-1].detach().numpy() # Make sure that redundant connections is removed.
-    # To --> From principal; remove all weigths where the previous nodes are not active (only include weights from active nodes)
-    #active_weights[-1] = np.array([active_weights[-1][:,j]*active_nodes_list[-1,j] for j in range(len(active_nodes_list[-1]))]).T
-    #active_weights[-1] = np.concatenate((active_weights[-1], clean_alpha_list[-1][:, dim:].detach().numpy()*weights[-1][:,dim:]),1) # Need to re-introduce active input weights in this layer 
     
     return active_weights
 
@@ -791,8 +784,6 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
         out, output_list = relu_activation(input_data, weights, bias_weights)
         if verbose: print(out) # "Predicted" values after sending data through network
         preds.append(out)
-        # net.eval()
-        # out, output_list = net.forward_preact(input_data, sample=False, ensemble=False)
         contribution_classes = {}
         for c in range(nr_classes):
             weights_class = copy.deepcopy(weights)
@@ -801,11 +792,10 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
             clean_alpha_list[-1] = clean_alpha_list[-1][c:c+1,:]
             dim, p = clean_alpha_list[0].shape
             output_list_c = copy.deepcopy(output_list)
-            # output_list_c[-1] = output_list_c[-1][:,c:c+1] # focus on one class at-a-time
             
             active_nodes_list = get_active_nodes(clean_alpha_list, output_list_c)
-            # print(active_nodes_list)
             active_weights = find_active_weights(weights_class, active_nodes_list, clean_alpha_list, dim)
+            
             
             pred_impact = {}
             for pi in range(p):
@@ -816,7 +806,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
                 x = np.array([[]])
                 for aw in active_weights:
                     x = np.concatenate((x, explain_this_numpy), 1)
-                    x = x@aw.T                   
+                    x = x@aw.T           
 
                 pred_impact[pi] = x[0,0]
         
@@ -837,7 +827,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
             cred_contribution[c][pi] = np.quantile(values, quantiles) # diff CI, uses 95\% as standard
         bias_contr = np.array([contributions[s][c]["bias"] for s in range(n_samples)])
         mean_contribution[c]["bias"] = np.mean(bias_contr)
-        cred_contribution[c]["bias"] = np.quantile(bias_contr, quantiles)
+        cred_contribution[c]["bias"] = np.quantile(bias_contr, quantiles)  # TODO: In cases with a lot of zeros, and a few digits, one could get [0,0]. This would harm the current plotting function.
 
     return mean_contribution, cred_contribution, np.array(preds)
 

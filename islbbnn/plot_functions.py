@@ -127,13 +127,17 @@ def plot_local_contribution_empirical(net, data, sample=True, median=True, n_sam
             variable_names_class = variable_names_class[:-1]
         
         if not include_zero_means:
-            not_include = means != 0
-            variable_names_class = variable_names_class[not_include]
-            means = means[not_include]
-            errors = errors[not_include]
+            include = means != 0
+            variable_names_class = variable_names_class[include]
+            means = means[include]
+            errors = errors[include]
 
         means = np.append(means, preds_means[c])
         errors = np.vstack([errors, preds_errors])
+        for indx, err in enumerate(errors):
+            if err[0] == 0 and err[1] == 0:
+                err[0] = means[indx]
+                err[1] = means[indx]
         top = errors[:,1]-means
         bottom = means-errors[:,0]
         variable_names_class = np.append(variable_names_class, "Prediction")
