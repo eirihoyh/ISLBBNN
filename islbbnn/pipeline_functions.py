@@ -832,6 +832,74 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
     return mean_contribution, cred_contribution, np.array(preds)
 
 
+def local_explain_relu_magnitude(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1, verbose=False, quantiles=[0.025,0.975]):
+    contributions = {}
+    preds = []
+    for n in range(n_samples):
+        if verbose: print(f"Sample nr. {n}")
+        alphas_numpy = get_alphas_numpy(net)
+        nr_classes = alphas_numpy[-1].shape[0]
+        
+        weights, bias_weights, alphas_numpy = get_weight_and_bias(net, alphas_numpy, median, sample, threshold) 
+
+        # Get alpha matrices to torch to work for "clean_alpha_class" func
+        alphas = copy.deepcopy(alphas_numpy)
+        for i in range(len(alphas)):
+            alphas[i] = torch.tensor(alphas[i])
+
+        out, output_list = relu_activation(input_data, weights, bias_weights)
+        if verbose: print(out) # "Predicted" values after sending data through network
+        preds.append(out)
+        contribution_classes = {}
+        for c in range(nr_classes):
+            weights_class = copy.deepcopy(weights)
+            weights_class[-1] = weights_class[-1][c:c+1,:]  # Only include weights going into the class of interest
+            clean_alpha_list = clean_alpha_class(net, threshold=0.5, class_in_focus=c, alpha_list=copy.deepcopy(alphas))
+            clean_alpha_list[-1] = clean_alpha_list[-1][c:c+1,:]
+            dim, p = clean_alpha_list[0].shape
+            output_list_c = copy.deepcopy(output_list)
+            
+            active_nodes_list = get_active_nodes(clean_alpha_list, output_list_c)
+            active_weights = find_active_weights(weights_class, active_nodes_list, clean_alpha_list, dim)
+            
+            
+            pred_impact = {}
+            for pi in range(p):
+                explain_this_numpy = np.ones((1,p))
+                remove_list = [True]*p
+                remove_list[pi] = False # focus on one input at-a-time
+                explain_this_numpy[0,remove_list] = 0
+                x = np.array([[]])
+                for aw in active_weights:
+                    x = np.concatenate((x, explain_this_numpy), 1)
+                    x = x@aw.T           
+
+                # if the input value is equal to zero, it gives opposite contribution to prediction
+                pred_impact[pi] = -1.*x[0,0] if input_data.detach().numpy()[0,pi] == 0 else x[0,0]
+
+
+            pred_impact["bias"] = out[0,c] - sum(input_data.detach().numpy()[0]*list(pred_impact.values())) # Bias will be what the inputs can't explain
+            contribution_classes[c] = pred_impact
+        contributions[n] = contribution_classes
+
+    mean_contribution = {}
+    cred_contribution = {}
+    for c in range(nr_classes):
+        mean_contribution[c] = {}
+        cred_contribution[c] = {}
+        for pi in range(p):
+            values = np.zeros(n_samples)
+            for s in range(n_samples):
+                values[s] = contributions[s][c][pi]
+            mean_contribution[c][pi] = np.mean(values)
+            cred_contribution[c][pi] = np.quantile(values, quantiles) # diff CI, uses 95\% as standard
+        bias_contr = np.array([contributions[s][c]["bias"] for s in range(n_samples)])
+        mean_contribution[c]["bias"] = np.mean(bias_contr)
+        cred_contribution[c]["bias"] = np.quantile(bias_contr, quantiles)  # TODO: In cases with a lot of zeros, and a few digits, one could get [0,0]. This would harm the current plotting function.
+
+    return mean_contribution, cred_contribution, np.array(preds)
+
+
 def local_explain_relu_normal_dist(net, input_data, threshold=0.5, verbose=False, quantiles=[0.025,0.975]):
     '''
     Gives local explainability in terms as a probability distribution

@@ -336,6 +336,77 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
             plt.savefig(f"{save_path}/{class_names[i]}.png", bbox_inches='tight')
         plt.show()
 
+
+def plot_local_contribution_images_contribution_empirical_magnitude(net, explain_this, n_classes=1, class_names=None, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975], save_path=None):
+    '''
+    NOTE: Only works for ReLU based networks 
+    '''
+    _, cred_contribution, _ = pip_func.local_explain_relu_magnitude(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
+
+    p = int(explain_this.shape[-1]**0.5)
+
+    # make cred interval for pred based on n_samples (NOTE: softmax function)
+    all_preds = []
+    for _ in range(10_000):
+        net.eval()
+        preds = net.forward(explain_this, sample=True, ensemble=False).detach().cpu().numpy()[0]
+        all_preds.append(np.exp(preds)/sum(np.exp(preds)))
+
+    lower, upper = np.quantile(all_preds,[0.025,0.975], 0)
+
+    if class_names == None:
+        class_names = np.arange(n_classes)
+
+    colors_025 = ["blue", "white", "red"]
+    colors_975 = ["blue", "white", "red"]
+    cmap_025 = mcolors.LinearSegmentedColormap.from_list("", colors_025)
+    cmap_975 = mcolors.LinearSegmentedColormap.from_list("", colors_975)
+    used_img = explain_this.reshape((p,p))
+    for i in range(n_classes):
+        explained_c = np.array(list(cred_contribution[i].values())[:-1])
+        
+        explained_025 = explained_c[:,0].reshape((p,p))
+        explained_025 = np.where(abs(explained_025)>0, explained_025, np.nan)
+        explained_975 = explained_c[:,1].reshape((p,p))
+        explained_975 = np.where(abs(explained_975)>0, explained_975, np.nan)
+        
+        maxima_025 = np.nanmax(explained_025)
+        minima_025 = np.nanmin(explained_025)
+
+        maxima_975 = np.nanmax(explained_975)
+        minima_975 = np.nanmin(explained_975)
+        fig, axs = plt.subplots(1,2, figsize=(8,8))
+
+
+        maxima = np.max([maxima_025, maxima_975,0])
+        minima = np.min([minima_025, minima_975,0])
+                
+        axs[0].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        axs[1].imshow(used_img, cmap="Greys", vmin=torch.min(used_img), vmax=torch.max(used_img)+0.5)
+        norm_mean = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[0].imshow(explained_025, cmap=cmap_025, norm=norm_mean)
+        cbar = fig.colorbar(im, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+
+        norm_std = TwoSlopeNorm(vmin=minima-0.001, vcenter=0, vmax=maxima+0.001)
+        im = axs[1].imshow(explained_975, cmap=cmap_975, norm=norm_std)
+        cbar = fig.colorbar(im, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar.ax.set_yscale('linear')
+        
+        axs[0].set_title(f"0.025 quantile")
+        axs[1].set_title(f"0.975 quantile")
+
+        axs[0].set_xticks([])
+        axs[0].set_yticks([])
+        axs[1].set_xticks([])
+        axs[1].set_yticks([])
+        fig.suptitle(f"Local explain class: {class_names[i]}. Credibility interval: [{lower[i]:.4f}, {upper[i]:.4f}]")
+        plt.tight_layout(rect=[0, 0.03, 1, 1.3])
+        if save_path != None:
+            plt.savefig(f"{save_path}/{class_names[i]}.png", bbox_inches='tight')
+        plt.show()
+
+
 def plot_local_contribution_images_contribution_dist(net, explain_this, n_classes=1, class_names=None):
     cont_class, _, _ = pip_func.local_explain_relu_normal_dist(net, explain_this)
     
