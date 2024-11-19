@@ -97,13 +97,16 @@ def run_path_graph_weight(net, threshold=0.5, save_path="path_graphs/all_paths_i
     plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
 
 
-def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None, quantiles=[0.025,0.975], include_zero_means=True):
+def plot_local_contribution_empirical(net, data, sample=True, median=True, n_samples=1, include_bias=True, save_path=None, n_classes=1, class_names=None, variable_names=None, quantiles=[0.025,0.975], include_zero_means=True, magnitude=False, include_potential_contribution=False):
     '''
     Empirical local explaination model. This should be used for tabular data as 
     images usually has too many variables to get a good plot
     '''
     variable_names = copy.deepcopy(variable_names)
-    mean_contribution, cred_contribution, preds = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
+    if magnitude:
+        mean_contribution, cred_contribution, preds = pip_func.local_explain_relu_magnitude(net, data, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles, include_potential_contribution=include_potential_contribution)
+    else:
+        mean_contribution, cred_contribution, preds = pip_func.local_explain_relu(net, data, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
     if class_names == None:
         class_names = np.arange(n_classes)
     if variable_names == None:

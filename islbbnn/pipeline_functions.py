@@ -832,7 +832,7 @@ def local_explain_relu(net, input_data, threshold=0.5, median=True, sample=False
     return mean_contribution, cred_contribution, np.array(preds)
 
 
-def local_explain_relu_magnitude(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1, verbose=False, quantiles=[0.025,0.975]):
+def local_explain_relu_magnitude(net, input_data, threshold=0.5, median=True, sample=False, n_samples=1, verbose=False, quantiles=[0.025,0.975], include_potential_contribution=True):
     contributions = {}
     preds = []
     for n in range(n_samples):
@@ -874,8 +874,11 @@ def local_explain_relu_magnitude(net, input_data, threshold=0.5, median=True, sa
                     x = np.concatenate((x, explain_this_numpy), 1)
                     x = x@aw.T           
 
-                # if the input value is equal to zero, it gives opposite contribution to prediction
-                pred_impact[pi] = -1.*x[0,0] if input_data.detach().numpy()[0,pi] == 0 else x[0,0]
+                if include_potential_contribution:
+                    # if the input value is equal to zero, it gives opposite contribution to prediction
+                    pred_impact[pi] = -1.*x[0,0] if input_data.detach().numpy()[0,pi] == 0 else x[0,0]
+                else:
+                    pred_impact[pi] = 0 if input_data.detach().numpy()[0,pi] == 0 else x[0,0]
 
 
             pred_impact["bias"] = out[0,c] - sum(input_data.detach().numpy()[0]*list(pred_impact.values())) # Bias will be what the inputs can't explain
