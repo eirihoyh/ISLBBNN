@@ -340,11 +340,11 @@ def plot_local_contribution_images_contribution_empirical(net, explain_this, n_c
         plt.show()
 
 
-def plot_local_contribution_images_contribution_empirical_magnitude(net, explain_this, n_classes=1, class_names=None, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975], save_path=None):
+def plot_local_contribution_images_contribution_empirical_magnitude(net, explain_this, n_classes=1, class_names=None, sample=True, median=True, n_samples=100, quantiles=[0.025,0.975], save_path=None, include_potential_contribution=False):
     '''
     NOTE: Only works for ReLU based networks 
     '''
-    _, cred_contribution, _ = pip_func.local_explain_relu_magnitude(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles)
+    _, cred_contribution, _ = pip_func.local_explain_relu_magnitude(net, explain_this, sample=sample, median=median, n_samples=n_samples, quantiles=quantiles, include_potential_contribution=include_potential_contribution)
 
     p = int(explain_this.shape[-1]**0.5)
 
